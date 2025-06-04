@@ -35,3 +35,13 @@ python object_detector.py
 ```
 
 The web interface will be available on **http://localhost:8080** address. You can upload the teeth image and see if it contains caries.
+
+# About This Version
+
+This repository is a modified version of the original yolov8_caries_detector by Andrey Germanov.
+
+In this version, I have extended the project by adding a separate CNN classifier applied on the crops extracted from YOLOv8 detections for improved caries classification. Additionally, I integrated explainability functionalities specifically for the CNN model, including Grad-CAM and SHAP techniques to generate visual explanations of the CNN’s predictions. I also developed additional scripts to support training, evaluation, and integration with the YOLOv8 detection pipeline.
+
+These enhancements were implemented as part of my bachelor thesis on dental caries detection.
+
+The original author’s work is gratefully acknowledged.
