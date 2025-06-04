@@ -2,6 +2,7 @@
 <html lang="ro">
 <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YOLOv8 - Detectarea Cariilor</title>
     <style>
         body {
@@ -17,6 +18,7 @@
             color: #2c3e50;
             margin-bottom: 30px;
             font-size: 36px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
         }
 
         h2 {
@@ -29,26 +31,33 @@
         input[type="file"] {
             display: block;
             margin: 0 auto 20px auto;
-            padding: 10px;
+            padding: 12px 20px;
             background-color: #3498db;
             color: white;
             font-size: 16px;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: background-color 0.3s;
+            transition: background-color 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 8px rgba(52,152,219,0.3);
+            width: 250px;
+            text-align: center;
         }
 
         input[type="file"]:hover {
             background-color: #2980b9;
+            box-shadow: 0 6px 12px rgba(41,128,185,0.5);
         }
 
         canvas {
             display: block;
-            margin: 0 auto 20px auto;
-            border: 2px solid #3498db;
+            margin: 20px auto 40px auto;
+            border: 3px solid #3498db;
             background-color: white;
-            max-width: 100%;
+            max-width: 90%;
+            max-height: 500px;
+            border-radius: 12px;
+            box-shadow: 0 6px 18px rgba(52,152,219,0.25);
         }
 
         .region-results {
@@ -57,59 +66,316 @@
             justify-content: center;
             gap: 30px;
             margin-top: 30px;
+            padding-bottom: 50px;
         }
 
         .region-card {
             background-color: #ffffff;
-            padding: 15px;
+            padding: 20px;
             border-radius: 12px;
             border: 2px solid #3498db;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
             text-align: center;
             width: 220px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .region-card {
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            padding: 10px;
-            margin: 10px;
-            display: inline-block;
-            vertical-align: top;
-            background: #f9f9f9;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        .region-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px rgba(52,152,219,0.3);
         }
 
         .region-card img {
             max-width: 200px;
-            display: block;
-            margin-bottom: 8px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
 
-
-
         .region-card img:hover {
-            transform: scale(1.05);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            transform: scale(1.07);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .region-card h3 {
+            margin-top: 0;
+            margin-bottom: 12px;
+            color: #2c3e50;
+            font-size: 20px;
+        }
+
+        .region-card p {
+            font-weight: bold;
+            margin: 0;
+            font-size: 16px;
         }
 
         .file-input-container {
             text-align: center;
+            max-width: 700px;
+            margin: 0 auto 10px auto;
         }
 
         .file-input-container p {
             font-size: 18px;
             color: #7f8c8d;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
 
         .footer {
             text-align: center;
-            margin-top: 40px;
+            margin-top: 60px;
             color: #95a5a6;
+            font-size: 14px;
         }
+
+        /* Help button */
+        #helpButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 28px;
+            cursor: pointer;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+            transition: background-color 0.3s, box-shadow 0.3s;
+            z-index: 1100;
+        }
+        #helpButton:hover {
+            background-color: #2980b9;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        }
+
+        /* Help modal */
+        #helpModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #helpModal > div {
+            background: white;
+            padding: 25px 30px;
+            border-radius: 14px;
+            max-width: 420px;
+            margin: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+            font-size: 16px;
+            color: #2c3e50;
+            position: relative;
+        }
+
+        #helpModal h2 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 28px;
+        }
+
+        #helpModal p {
+            line-height: 1.5;
+        }
+
+        #closeHelp {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            background: transparent;
+            border: none;
+            font-size: 26px;
+            cursor: pointer;
+            color: #888;
+            transition: color 0.3s;
+        }
+        #closeHelp:hover {
+            color: #444;
+        }
+        body.dark {
+    background-color: #1e1e1e;
+    color: #eee;
+}
+
+body.dark .region-card {
+    background-color: #2c3e50;
+    border-color: #2980b9;
+    color: #eee;
+}
+
+body.dark .region-card img {
+    box-shadow: 0 6px 16px rgba(255, 255, 255, 0.05);
+}
+
+body.dark h1,
+body.dark h2,
+body.dark .region-card h3,
+body.dark .region-card p,
+body.dark .file-input-container p,
+body.dark .footer {
+    color: #eee;
+}
+
+body.dark canvas {
+    background-color: #2c3e50;
+}
+
+body.dark #helpModal > div {
+    background-color: #2c3e50;
+    color: #eee;
+}
+
+body.dark #helpModal h2,
+body.dark #helpModal p {
+    color: #eee;
+}
+.dark-toggle-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 1100;
+}
+
+#overlay-loader {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(0,0,0,0.4);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+
+#overlay-loader.active {
+  display: flex;
+}
+
+.spinner {
+  border: 8px solid #f3f3f3;
+  border-top: 8px solid #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 15px;
+}
+
+.loader-text {
+  color: #fff;
+  font-size: 18px;
+}
+
+body.dark #overlay-loader {
+  background-color: rgba(0,0,0,0.6);
+}
+
+body.dark .spinner {
+  border: 8px solid #444;
+  border-top: 8px solid #2980b9;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 28px;
+        padding: 0 10px;
+    }
+
+    h2 {
+        font-size: 20px;
+        padding: 0 10px;
+    }
+
+    .file-input-container p {
+        font-size: 16px;
+        padding: 0 10px;
+    }
+
+    input[type="file"] {
+        width: 90%;
+        font-size: 14px;
+    }
+
+    canvas {
+        max-width: 100%;
+        height: auto;
+    }
+
+    .region-card {
+        width: 90%;
+        margin: 0 auto;
+    }
+
+    .footer {
+        font-size: 12px;
+    }
+
+    #darkModeToggle,
+    #helpButton {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+}
+canvas, .region-card img {
+    max-width: 100%;
+    height: auto;
+}
+
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1500;
+  padding-top: 60px;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.9);
+}
+
+.modal-content {
+  display: block;
+  margin: auto;
+  max-width: 90%;
+  max-height: 80%;
+  border-radius: 12px;
+  box-shadow: 0 0 25px rgba(0,0,0,0.6);
+}
+
+.close {
+  position: absolute;
+  top: 20px;
+  right: 40px;
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #f1c40f;
+}
+
     </style>
 </head>
+
 <body>
     <h1>YOLOv8 - Detectarea Cariilor</h1>
 
@@ -127,125 +393,266 @@
         <p>&copy; 2025 YOLOv8 - Detectarea Cariilor</p>
     </div>
 
+    <!-- Help button and modal -->
+    <button id="helpButton" title="Help" aria-label="Deschide fereastra de ajutor">?</button>
+
+
+    <div id="helpModal">
+        <div>
+            <h2>Ajutor</h2>
+            <p>
+              1. Apasă pe butonul „Alege o imagine” pentru a încărca o fotografie dentară.<br/>
+              2. Sistemul va detecta automat zonele cu potențiale carii.<br/>
+              3. Vei vedea imaginea originală cu zonele evidențiate și secțiuni decupate cu explicații vizuale.<br/>
+              4. Dacă întâmpini probleme, verifică formatul imaginii (JPEG, PNG etc.) și dimensiunea (max 10MB).<br/>
+              5. Pentru întrebări suplimentare, contactează suportul.
+            </p>
+            <button id="closeHelp" title="Închide">×</button>
+        </div>
+    </div>
+
+    <!-- Dark mode toggle -->
+    <button id="darkModeToggle" class="dark-toggle-btn" aria-label="Comută la modul întunecat" title="Dark mode/Light mode">
+    <svg id="darkIcon" width="32" height="32" viewBox="0 0 24 24" fill="#3498db" xmlns="http://www.w3.org/2000/svg">
+        <path d="M21.64 13a9 9 0 01-10.6-10.6 1 1 0 00-1.27-1.27 11 11 0 1013.14 13.14 1 1 0 00-1.27-1.27z"/>
+    </svg>
+</button>
+
+
+    <!-- Loading Overlay with Spinner -->
+    <div id="overlay-loader">
+        <div class="spinner"></div>
+        <p class="loader-text">Procesăm imaginea...</p>
+    </div>
+
+    <!-- Modal pentru mărirea imaginilor -->
+<div id="imageModal" class="modal">
+  <span id="closeModal" class="close">&times;</span>
+  <img class="modal-content" id="modalImage">
+</div>
+
+
     <script>
         const input = document.getElementById("uploadInput");
         const regionResultsContainer = document.getElementById("region-results-container");
+        const overlayLoader = document.getElementById("overlay-loader");
+
 
         input.addEventListener("change", async (event) => {
             const file = event.target.files[0];
             if (!file) return;
 
+            // Validare dimensiune (max 10MB)
+            if (file.size > 10 * 1024 * 1024) {
+                alert("Fișierul este prea mare. Alege o imagine mai mică de 10MB.");
+                input.value = "";
+                return;
+            }
+
             const data = new FormData();
             data.append("image_file", file, "image_file");
 
             try {
-                const response = await fetch("/detect", {
-                    method: "POST",
-                    body: data
-                });
+    overlayLoader.classList.add("active"); // ✨ PORNEȘTE SPINNER
 
-                const result = await response.json();
-                console.log("Răspuns de la backend:", result);
+    const response = await fetch("/detect", {
+        method: "POST",
+        body: data
+    });
 
-                drawImageAndBoxes(file, result.detections || []);
+    overlayLoader.classList.remove("active"); // ✅ OPREȘTE SPINNER
 
-                // Afișare regiuni (crop + Grad-CAM)
-                regionResultsContainer.innerHTML = "";
+    if (!response.ok) {
+        alert("Eroare la procesarea imaginii. Încearcă din nou.");
+        return;
+    }
 
-                const croppedImages = result.cropped_images || [];
-                const explanations = result.gradcam_images || [];
-                const predictions = result.cnn_predictions || [];
-                const confidences = result.cnn_confidences || [];
-                const shapImages = result.shap_images || [];
+    const result = await response.json();
+    console.log("Răspuns de la backend:", result);
 
+    drawImageAndBoxes(file, result.detections || []);
+    regionResultsContainer.innerHTML = "";
 
-        for (let i = 0; i < croppedImages.length; i++) {
-            const card = document.createElement("div");
-            card.className = "region-card";
+    const croppedImages = result.cropped_images || [];
+    const explanations = result.gradcam_images || [];
+    const predictions = result.cnn_predictions || [];
+    const confidences = result.cnn_confidences || [];
+    const shapImages = result.shap_images || [];
 
-            const title = document.createElement("h3");
-            title.textContent = `Regiune ${i + 1}`;
-            card.appendChild(title);
+    for (let i = 0; i < croppedImages.length; i++) {
+        const card = document.createElement("div");
+        card.className = "region-card";
 
-            const cropImg = document.createElement("img");
-            cropImg.src = croppedImages[i] + "?t=" + new Date().getTime();
-            cropImg.alt = "Imagine decupată";
+        const title = document.createElement("h3");
+        title.textContent = `Regiune ${i + 1}`;
+        card.appendChild(title);
 
-            const camImg = document.createElement("img");
-            camImg.src = explanations[i] + "?t=" + new Date().getTime();
-            camImg.alt = "Imagine Grad-CAM";
-            camImg.onerror = () => {
-                camImg.alt = "Imagine Grad-CAM - eroare la încărcare";
-                camImg.style.opacity = "0.5";
-                camImg.style.border = "2px dashed red";
-            };
+        const predictionText = document.createElement("p");
+        predictionText.textContent = `Clasificare: ${predictions[i] || "N/A"}`;
+        card.appendChild(predictionText);
 
-            let shapImg = null;
-            if (shapImages[i]) {
-                shapImg = document.createElement("img");
-                shapImg.src = shapImages[i] + "?t=" + new Date().getTime();
-                shapImg.alt = "Imagine SHAP";
-                shapImg.onerror = () => {
-                    shapImg.alt = "Imagine SHAP - eroare la încărcare";
-                    shapImg.style.opacity = "0.5";
-                    shapImg.style.border = "2px dashed red";
-                };
-            }
+        const confidenceText = document.createElement("p");
+        confidenceText.textContent = `Încredere: ${(confidences[i] || 0).toFixed(2)}%`;
+        card.appendChild(confidenceText);
 
-            const label = document.createElement("p");
-            const confValue = confidences[i];
-            let predValue = predictions[i];
+        const cropImg = document.createElement("img");
+        cropImg.src = croppedImages[i] + "?t=" + new Date().getTime();
+        cropImg.alt = "Imagine decupată";
+        card.appendChild(cropImg);
 
-            if (predValue === 0 || predValue === "0")
-                predValue = "carie";
-            else if (predValue === 1 || predValue === "1")
-                predValue = "non-carie";
-            else
-                predValue = "necunoscut";
+        if (explanations[i]) {
+            const gradcamLabel = document.createElement("p");
+            gradcamLabel.textContent = "Hartă Grad-CAM";
+            gradcamLabel.style.marginTop = "10px";
+            gradcamLabel.style.fontWeight = "bold";
+            card.appendChild(gradcamLabel);
 
-            label.textContent = `Predicție CNN: ${predValue} (${confValue.toFixed(1)}%)`;
-            label.style.fontWeight = "bold";
-            label.style.color = predValue === "carie" ? "red" : "green";
-
-            card.appendChild(label);
-            card.appendChild(cropImg);
-            card.appendChild(camImg);
-            if (shapImg) {
-                card.appendChild(shapImg);
-            }
-
-            regionResultsContainer.appendChild(card);
+            const explImg = document.createElement("img");
+            explImg.src = explanations[i] + "?t=" + new Date().getTime();
+            explImg.alt = "Explicație vizuală (Grad-CAM)";
+            explImg.style.marginTop = "6px";
+            card.appendChild(explImg);
         }
 
+        if (shapImages[i]) {
+            const shapLabel = document.createElement("p");
+            shapLabel.textContent = "Hartă SHAP";
+            shapLabel.style.marginTop = "10px";
+            shapLabel.style.fontWeight = "bold";
+            card.appendChild(shapLabel);
 
-            } catch (error) {
-                console.error("Eroare la trimiterea imaginii:", error);
-            }
+            const shapImg = document.createElement("img");
+            shapImg.src = shapImages[i] + "?t=" + new Date().getTime();
+            shapImg.alt = "Explicație vizuală (SHAP)";
+            shapImg.style.marginTop = "6px";
+            card.appendChild(shapImg);
+        }
+
+        regionResultsContainer.appendChild(card);
+    }
+
+} catch (error) {
+    overlayLoader.classList.remove("active");
+    console.error("Eroare:", error);
+    alert("A apărut o eroare la procesarea imaginii.");
+}
+
         });
 
-        function drawImageAndBoxes(file, boxes) {
-            const img = new Image();
-            img.src = URL.createObjectURL(file);
-            img.onload = () => {
-                const canvas = document.querySelector("canvas");
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext("2d");
+        function drawImageAndBoxes(file, detections) {
+            const canvas = document.querySelector("canvas");
+            const ctx = canvas.getContext("2d");
 
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                ctx.drawImage(img, 0, 0);
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    // Ajustăm dimensiunea canvasului la imagine, cu limită maximă pentru desktop
+                    const maxWidth = 850;
+                    const scale = Math.min(maxWidth / img.width, 1);
+                    canvas.width = img.width * scale;
+                    canvas.height = img.height * scale;
 
-                ctx.strokeStyle = "#00FF00";
-                ctx.lineWidth = 2;
-                ctx.font = "18px Arial";
-                ctx.fillStyle = "#00FF00";
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-                boxes.forEach(box => {
-                    const [x1, y1, x2, y2, className, conf] = box;
-                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-                });
+                    // Desenăm cutiile detectate
+                    ctx.strokeStyle = "#27ae60";
+                    ctx.lineWidth = 3;
+                    ctx.font = "18px Arial";
+                    ctx.fillStyle = "#e74c3c";
+
+                    detections.forEach(det => {
+    // det trebuie să aibă x1,y1,x2,y2 + label + confidence
+    const [x1, y1, x2, y2, conf, label] = det;
+
+    // scalăm coordonatele dacă imaginea este redimensionată
+    const sx1 = x1 * scale;
+    const sy1 = y1 * scale;
+    const sx2 = x2 * scale;
+    const sy2 = y2 * scale;
+
+    const width = sx2 - sx1;
+    const height = sy2 - sy1;
+
+    // Desenăm doar dreptunghiul fără text
+    ctx.strokeRect(sx1, sy1, width, height);
+
+
+});
+
+                };
+                img.src = e.target.result;
             };
+            reader.readAsDataURL(file);
         }
+
+        // Help modal functionality
+        const helpButton = document.getElementById("helpButton");
+        const helpModal = document.getElementById("helpModal");
+        const closeHelp = document.getElementById("closeHelp");
+
+        helpButton.onclick = () => {
+            helpModal.style.display = "flex";
+        };
+
+        closeHelp.onclick = () => {
+            helpModal.style.display = "none";
+        };
+
+        window.onclick = (event) => {
+            if (event.target === helpModal) {
+                helpModal.style.display = "none";
+            }
+        };
+
+        const darkModeToggle = document.getElementById("darkModeToggle");
+        const darkIcon = document.getElementById("darkIcon");
+
+function updateDarkIcon(isDark) {
+    darkIcon.innerHTML = isDark
+        ? '<circle cx="12" cy="12" r="5" fill="#f1c40f"></circle>' // Soare pentru light mode
+        : '<path d="M21.64 13a9 9 0 01-10.6-10.6 1 1 0 00-1.27-1.27 11 11 0 1013.14 13.14 1 1 0 00-1.27-1.27z" fill="#3498db"/>';
+}
+
+darkModeToggle.onclick = () => {
+    const isDark = document.body.classList.toggle("dark");
+    localStorage.setItem("darkMode", isDark);
+    updateDarkIcon(isDark);
+};
+
+window.onload = () => {
+    const isDark = localStorage.getItem("darkMode") === "true";
+    if (isDark) document.body.classList.add("dark");
+    updateDarkIcon(isDark);
+
+
+    };
+
+// Modal pentru imagine mărită
+const modal = document.getElementById("imageModal");
+const modalImg = document.getElementById("modalImage");
+const closeModal = document.getElementById("closeModal");
+
+// Event delegation: click pe toate imaginile din .region-card
+regionResultsContainer.addEventListener("click", (e) => {
+    if (e.target.tagName === "IMG") {
+        modal.style.display = "block";
+        modalImg.src = e.target.src;
+    }
+});
+
+closeModal.onclick = () => {
+    modal.style.display = "none";
+};
+
+window.onclick = (e) => {
+    if (e.target === modal) {
+        modal.style.display = "none";
+    }
+};
+
+
     </script>
 </body>
 </html>
