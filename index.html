@@ -1,61 +1,251 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ro">
 <head>
-    <meta charset="UTF-8">
-    <title>YOLOv8 Object Detection</title>
+    <meta charset="UTF-8" />
+    <title>YOLOv8 - Detectarea Cariilor</title>
     <style>
-      canvas {
-          display:block;
-          border: 1px solid black;
-          margin-top:10px;
-      }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 36px;
+        }
+
+        h2 {
+            text-align: center;
+            color: #34495e;
+            margin-top: 20px;
+            font-size: 24px;
+        }
+
+        input[type="file"] {
+            display: block;
+            margin: 0 auto 20px auto;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        input[type="file"]:hover {
+            background-color: #2980b9;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto 20px auto;
+            border: 2px solid #3498db;
+            background-color: white;
+            max-width: 100%;
+        }
+
+        .region-results {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .region-card {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
+            border: 2px solid #3498db;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 220px;
+        }
+
+        .region-card {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px;
+            display: inline-block;
+            vertical-align: top;
+            background: #f9f9f9;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .region-card img {
+            max-width: 200px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+
+
+        .region-card img:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .file-input-container {
+            text-align: center;
+        }
+
+        .file-input-container p {
+            font-size: 18px;
+            color: #7f8c8d;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #95a5a6;
+        }
     </style>
 </head>
 <body>
-    <input id="uploadInput" type="file"/>
-    <canvas></canvas>
-    <script>
-      /**
-       * "Upload" button onClick handler: uploads selected image file
-       * to backend, receives array of detected objects
-       * and draws them on top of image
-       */
-       const input = document.getElementById("uploadInput");
-       input.addEventListener("change",async(event) => {
-           const data = new FormData();
-           data.append("image_file",event.target.files[0],"image_file");
-           const response = await fetch("/detect",{
-               method:"post",
-               body:data
-           });
-           const boxes = await response.json();
-           draw_image_and_boxes(event.target.files[0],boxes);
-       })
+    <h1>YOLOv8 - Detectarea Cariilor</h1>
 
-      /**
-       * Function draws the image from provided file
-       * and bounding boxes of detected objects on
-       * top of the image
-       * @param file Uploaded file object
-       * @param boxes Array of bounding boxes in format [[x1,y1,x2,y2,object_type,probability],...]
-       */
-      function draw_image_and_boxes(file,boxes) {
-          const img = new Image()
-          img.src = URL.createObjectURL(file);
-          img.onload = () => {
-              const canvas = document.querySelector("canvas");
-              canvas.width = img.width;
-              canvas.height = img.height;
-              const ctx = canvas.getContext("2d");
-              ctx.drawImage(img,0,0);
-              ctx.strokeStyle = "#00FF00";
-              ctx.lineWidth = 3;
-              ctx.font = "18px serif";
-              boxes.forEach(([x1,y1,x2,y2,label]) => {
-                  ctx.strokeRect(x1,y1,x2-x1,y2-y1);
-              });
-          }
-      }
+    <div class="file-input-container">
+        <p>Alege o imagine pentru a detecta carii dentare și a vizualiza zonele decupate:</p>
+        <input id="uploadInput" type="file" accept="image/*" />
+    </div>
+
+    <canvas></canvas>
+
+    <h2>Rezultatele pentru fiecare regiune detectată:</h2>
+    <div class="region-results" id="region-results-container"></div>
+
+    <div class="footer">
+        <p>&copy; 2025 YOLOv8 - Detectarea Cariilor</p>
+    </div>
+
+    <script>
+        const input = document.getElementById("uploadInput");
+        const regionResultsContainer = document.getElementById("region-results-container");
+
+        input.addEventListener("change", async (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const data = new FormData();
+            data.append("image_file", file, "image_file");
+
+            try {
+                const response = await fetch("/detect", {
+                    method: "POST",
+                    body: data
+                });
+
+                const result = await response.json();
+                console.log("Răspuns de la backend:", result);
+
+                drawImageAndBoxes(file, result.detections || []);
+
+                // Afișare regiuni (crop + Grad-CAM)
+                regionResultsContainer.innerHTML = "";
+
+                const croppedImages = result.cropped_images || [];
+                const explanations = result.gradcam_images || [];
+                const predictions = result.cnn_predictions || [];
+                const confidences = result.cnn_confidences || [];
+                const shapImages = result.shap_images || [];
+
+
+        for (let i = 0; i < croppedImages.length; i++) {
+            const card = document.createElement("div");
+            card.className = "region-card";
+
+            const title = document.createElement("h3");
+            title.textContent = `Regiune ${i + 1}`;
+            card.appendChild(title);
+
+            const cropImg = document.createElement("img");
+            cropImg.src = croppedImages[i] + "?t=" + new Date().getTime();
+            cropImg.alt = "Imagine decupată";
+
+            const camImg = document.createElement("img");
+            camImg.src = explanations[i] + "?t=" + new Date().getTime();
+            camImg.alt = "Imagine Grad-CAM";
+            camImg.onerror = () => {
+                camImg.alt = "Imagine Grad-CAM - eroare la încărcare";
+                camImg.style.opacity = "0.5";
+                camImg.style.border = "2px dashed red";
+            };
+
+            let shapImg = null;
+            if (shapImages[i]) {
+                shapImg = document.createElement("img");
+                shapImg.src = shapImages[i] + "?t=" + new Date().getTime();
+                shapImg.alt = "Imagine SHAP";
+                shapImg.onerror = () => {
+                    shapImg.alt = "Imagine SHAP - eroare la încărcare";
+                    shapImg.style.opacity = "0.5";
+                    shapImg.style.border = "2px dashed red";
+                };
+            }
+
+            const label = document.createElement("p");
+            const confValue = confidences[i];
+            let predValue = predictions[i];
+
+            if (predValue === 0 || predValue === "0")
+                predValue = "carie";
+            else if (predValue === 1 || predValue === "1")
+                predValue = "non-carie";
+            else
+                predValue = "necunoscut";
+
+            label.textContent = `Predicție CNN: ${predValue} (${confValue.toFixed(1)}%)`;
+            label.style.fontWeight = "bold";
+            label.style.color = predValue === "carie" ? "red" : "green";
+
+            card.appendChild(label);
+            card.appendChild(cropImg);
+            card.appendChild(camImg);
+            if (shapImg) {
+                card.appendChild(shapImg);
+            }
+
+            regionResultsContainer.appendChild(card);
+        }
+
+
+            } catch (error) {
+                console.error("Eroare la trimiterea imaginii:", error);
+            }
+        });
+
+        function drawImageAndBoxes(file, boxes) {
+            const img = new Image();
+            img.src = URL.createObjectURL(file);
+            img.onload = () => {
+                const canvas = document.querySelector("canvas");
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext("2d");
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                ctx.strokeStyle = "#00FF00";
+                ctx.lineWidth = 2;
+                ctx.font = "18px Arial";
+                ctx.fillStyle = "#00FF00";
+
+                boxes.forEach(box => {
+                    const [x1, y1, x2, y2, className, conf] = box;
+                    ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+                });
+            };
+        }
     </script>
 </body>
 </html>
