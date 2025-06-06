@@ -6,7 +6,7 @@ from torchvision.models import ResNet18_Weights
 from torchvision.transforms import InterpolationMode
 from PIL import Image
 import numpy as np
-from pytorch_grad_cam import GradCAM
+from pytorch_grad_cam import GradCAMPlusPlus
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 import shap
@@ -40,33 +40,37 @@ transform = transforms.Compose([
 
 
 def generate_gradcam(pil_image, model, region_id="0"):
+    model.eval()  # Asigură-te că modelul e în modul de evaluare
     input_tensor = transform(pil_image).unsqueeze(0).to(device)
 
+    # Pregătirea imaginii RGB pentru suprapunere
     rgb_image = pil_image.resize((224, 224), resample=Image.BICUBIC)
-    rgb_image = np.array(rgb_image) / 255.0
-    rgb_image = rgb_image.astype(np.float32)
+    rgb_image = np.array(rgb_image).astype(np.float32) / 255.0
 
+    # Prezicerea clasei
+    with torch.no_grad():
+        outputs = model(input_tensor)
+        probabilities = torch.nn.functional.softmax(outputs, dim=1)
+        confidence, predicted_class = torch.max(probabilities, 1)
+        confidence = confidence.item()
+        predicted_class = predicted_class.item()
+
+    # Generarea Grad-CAM
     target_layer = model.layer4[-1]
-    cam = GradCAM(model=model, target_layers=[target_layer])
+    with GradCAMPlusPlus(model=model, target_layers=[target_layer]) as cam:
+        targets = [ClassifierOutputTarget(predicted_class)]
+        grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0]
 
-    outputs = model(input_tensor)
-    probabilities = torch.nn.functional.softmax(outputs, dim=1)
-    confidence, predicted_class = torch.max(probabilities, 1)
-    confidence = confidence.item()
-    predicted_class = predicted_class.item()
-
-    targets = [ClassifierOutputTarget(predicted_class)]
-    grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0]
+    # Vizualizarea finală
     visualization = show_cam_on_image(rgb_image, grayscale_cam, use_rgb=True, image_weight=0.5)
 
+    # Salvare
     output_dir = "explanations/Grad-CAM"
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"gradcam_{region_id}.png")
-    highres_image = Image.fromarray(visualization).resize((1024, 1024), resample=Image.BICUBIC)
-    highres_image.save(output_path)
+    Image.fromarray(visualization).resize((1024, 1024), resample=Image.BICUBIC).save(output_path)
 
     return output_path, predicted_class, confidence
-
 
 def disable_inplace_relu(model):
     """Dezactivează ReLU inplace pentru compatibilitate cu SHAP"""
