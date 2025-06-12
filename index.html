@@ -98,7 +98,9 @@
     }
 
     .region-card img {
-      max-width: 200px;
+      width: 224px;
+      height: 224px;
+      object-fit: cover;
       border-radius: 8px;
       margin-bottom: 12px;
       transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -129,6 +131,25 @@
       color: #95a5a6;
       font-size: 14px;
     }
+
+    .custom-upload-button {
+  display: inline-block;
+  padding: 12px 24px;
+  background-color: #3498db;
+  color: white;
+  font-weight: bold;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.3s ease;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.custom-upload-button:hover {
+  background-color: #2980b9;
+}
+
 
     /* Help button */
     #helpButton {
@@ -355,8 +376,12 @@
     </p>
 
     <div class="file-input-container">
-        <p>Alege o imagine pentru a detecta carii dentare și a vizualiza zonele decupate:</p>
-        <input id="uploadInput" type="file" accept="image/*" />
+      <p>Alege o imagine pentru a detecta carii dentare și a vizualiza zonele decupate:</p>
+
+      <label for="uploadInput" class="custom-upload-button">Alege fișierul</label>
+      <input id="uploadInput" type="file" accept="image/*" style="display: none;" />
+
+      <p id="fileName" style="margin-top: 10px; font-style: italic; color: #555;"></p>
     </div>
 
     <canvas></canvas>
@@ -368,18 +393,20 @@
         <p>&copy; 2025 YOLOv8 - Detectarea Cariilor</p>
     </div>
 
-    <!-- Help button and modal -->
     <button id="helpButton" title="Help" aria-label="Deschide fereastra de ajutor">?</button>
 
     <div id="helpModal">
         <div>
             <h2>Ajutor</h2>
             <p>
-                1. Apasă pe butonul „Alege o imagine” pentru a încărca o fotografie dentară.<br/>
-                2. Sistemul va detecta automat zonele cu potențiale carii.<br/>
-                3. Vei vedea imaginea originală cu zonele evidențiate și secțiuni decupate cu explicații vizuale.<br/>
-                4. Dacă întâmpini probleme, verifică formatul imaginii (JPEG, PNG etc.) și dimensiunea (max 10MB).<br/>
-                5. Pentru întrebări suplimentare, contactează suportul.
+                1. Apasă pe butonul „Alege fișierul” pentru a încărca o fotografie dentară. <br/>
+                2. Sistemul va detecta automat zonele suspecte de carie folosind un model AI avansat.<br/>
+                3. Vei vedea imaginea originală cu zonele evidențiate, alături de secțiuni decupate și explicații vizuale (Grad-CAM++, Integrated Gradients).<br/>
+                4. Dacă întâmpini probleme, asigură-te că imaginea este în format JPG, PNG sau JPEG și are o dimensiune mai mică de 10MB.<br/>
+                5. Pentru întrebări sau feedback, contactează echipa de suport tehnic la: <br/>
+                <b><a href="mailto:ferdinand.trefil03@e-uvt.ro">ferdinand.trefil03@e-uvt.ro</a></b>.
+
+
             </p>
             <button id="closeHelp" title="Închide">×</button>
         </div>
@@ -395,7 +422,7 @@
     <!-- Loading Overlay with Spinner -->
     <div id="overlay-loader">
         <div class="spinner"></div>
-        <p class="loader-text">Procesăm imaginea...</p>
+        <p class="loader-text">Se procesează imaginea...</p>
     </div>
 
     <!-- Modal pentru mărirea imaginilor -->
@@ -406,144 +433,150 @@
 
     <script>
         const input = document.getElementById("uploadInput");
-        const regionResultsContainer = document.getElementById("region-results-container");
-        const overlayLoader = document.getElementById("overlay-loader");
+const regionResultsContainer = document.getElementById("region-results-container");
+const overlayLoader = document.getElementById("overlay-loader");
 
-        input.addEventListener("change", async (event) => {
-            const file = event.target.files[0];
-            if (!file) return;
+input.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
 
-            // Validare dimensiune (max 10MB)
-            if (file.size > 10 * 1024 * 1024) {
-                alert("Fișierul este prea mare. Alege o imagine mai mică de 10MB.");
-                input.value = "";
-                return;
-            }
+    if (file.size > 10 * 1024 * 1024) {
+        alert("Fișierul este prea mare. Alege o imagine mai mică de 10MB.");
+        input.value = "";
+        return;
+    }
 
-            const data = new FormData();
-            data.append("image_file", file, "image_file");
+    const data = new FormData();
+    data.append("image_file", file, "image_file");
 
-            try {
-                overlayLoader.classList.add("active");
+    try {
+        overlayLoader.classList.add("active");
 
-                const response = await fetch("/detect", {
-                    method: "POST",
-                    body: data
-                });
-
-                overlayLoader.classList.remove("active");
-
-                if (!response.ok) {
-                    alert("Eroare la procesarea imaginii. Încearcă din nou.");
-                    return;
-                }
-
-                const result = await response.json();
-                console.log("Răspuns de la backend:", result);
-
-                drawImageAndBoxes(file, result.detections || []);
-                regionResultsContainer.innerHTML = "";
-
-                const croppedImages = result.cropped_images || [];
-                const explanations = result.gradcam_images || [];
-                const predictions = result.cnn_predictions || [];
-                const confidences = result.cnn_confidences || [];
-                const shapImages = result.shap_images || [];
-
-                for (let i = 0; i < croppedImages.length; i++) {
-                    const card = document.createElement("div");
-                    card.className = "region-card";
-
-                    const title = document.createElement("h3");
-                    title.textContent = `Regiune ${i + 1}`;
-                    card.appendChild(title);
-
-                    const predictionText = document.createElement("p");
-                    predictionText.textContent = `Clasificare: ${predictions[i] || "N/A"}`;
-                    card.appendChild(predictionText);
-
-                    const confidenceText = document.createElement("p");
-                    confidenceText.textContent = `Încredere: ${(confidences[i] || 0).toFixed(2)}%`;
-                    card.appendChild(confidenceText);
-
-                    const cropImg = document.createElement("img");
-                    cropImg.src = croppedImages[i] + "?t=" + new Date().getTime();
-                    cropImg.alt = "Imagine decupată";
-                    card.appendChild(cropImg);
-
-                    if (explanations[i]) {
-                        const gradcamLabel = document.createElement("p");
-                        gradcamLabel.textContent = "Hartă Grad-CAM";
-                        gradcamLabel.style.marginTop = "10px";
-                        gradcamLabel.style.fontWeight = "bold";
-                        card.appendChild(gradcamLabel);
-
-                        const explImg = document.createElement("img");
-                        explImg.src = explanations[i] + "?t=" + new Date().getTime();
-                        explImg.alt = "Explicație vizuală (Grad-CAM)";
-                        explImg.style.marginTop = "6px";
-                        card.appendChild(explImg);
-                    }
-
-                    if (shapImages[i]) {
-                        const shapLabel = document.createElement("p");
-                        shapLabel.textContent = "Hartă SHAP";
-                        shapLabel.style.marginTop = "10px";
-                        shapLabel.style.fontWeight = "bold";
-                        card.appendChild(shapLabel);
-
-                        const shapImg = document.createElement("img");
-                        shapImg.src = shapImages[i] + "?t=" + new Date().getTime();
-                        shapImg.alt = "Explicație vizuală (SHAP)";
-                        shapImg.style.marginTop = "6px";
-                        card.appendChild(shapImg);
-                    }
-
-                    regionResultsContainer.appendChild(card);
-                }
-            } catch (error) {
-                overlayLoader.classList.remove("active");
-                console.error("Eroare:", error);
-                alert("A apărut o eroare la procesarea imaginii.");
-            }
+        const response = await fetch("/detect", {
+            method: "POST",
+            body: data
         });
 
-        function drawImageAndBoxes(file, detections) {
-            const canvas = document.querySelector("canvas");
-            const ctx = canvas.getContext("2d");
+        overlayLoader.classList.remove("active");
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    const maxWidth = 850;
-                    const scale = Math.min(maxWidth / img.width, 1);
-                    canvas.width = img.width * scale;
-                    canvas.height = img.height * scale;
-
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-                    ctx.strokeStyle = "#27ae60";
-                    ctx.lineWidth = 3;
-                    ctx.font = "18px Arial";
-                    ctx.fillStyle = "#e74c3c";
-
-                    detections.forEach(det => {
-                        const [x1, y1, x2, y2, conf, label] = det;
-                        const sx1 = x1 * scale;
-                        const sy1 = y1 * scale;
-                        const sx2 = x2 * scale;
-                        const sy2 = y2 * scale;
-                        const width = sx2 - sx1;
-                        const height = sy2 - sy1;
-                        ctx.strokeRect(sx1, sy1, width, height);
-                    });
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+        if (!response.ok) {
+            alert("Eroare la procesarea imaginii. Încearcă din nou.");
+            return;
         }
+
+        const result = await response.json();
+        console.log("Răspuns de la backend:", result);
+
+        drawImageAndBoxes(file, result.detections || []);
+        regionResultsContainer.innerHTML = "";
+
+        const croppedImages = result.cropped_images || [];
+        const croppedFullImages = result.cropped_full_images || [];
+        const explanations = result.gradcam_images || [];
+        const predictions = result.cnn_predictions || [];
+        const confidences = result.cnn_confidences || [];
+        const shapImages = result.shap_images || [];
+
+        for (let i = 0; i < croppedImages.length; i++) {
+            const card = document.createElement("div");
+            card.className = "region-card";
+
+            const title = document.createElement("h3");
+            title.textContent = `Regiune ${i + 1}`;
+            card.appendChild(title);
+
+            const predictionText = document.createElement("p");
+            predictionText.textContent = `Clasificare: ${predictions[i] || "N/A"}`;
+            card.appendChild(predictionText);
+
+            const confidenceText = document.createElement("p");
+            confidenceText.textContent = `Încredere: ${(confidences[i] || 0).toFixed(2)}%`;
+            card.appendChild(confidenceText);
+
+            const cropImg = document.createElement("img");
+            cropImg.src = croppedImages[i] + "?t=" + new Date().getTime();
+            cropImg.alt = "Imagine decupată";
+            cropImg.dataset.fullImage = croppedFullImages[i] + "?t=" + new Date().getTime(); // ⬅️ adaugă sursa completă
+            card.appendChild(cropImg);
+
+            if (explanations[i]) {
+                const gradcamLabel = document.createElement("p");
+                gradcamLabel.textContent = "Hartă Grad-CAM++";
+                gradcamLabel.style.marginTop = "10px";
+                gradcamLabel.style.fontWeight = "bold";
+                card.appendChild(gradcamLabel);
+
+                const explImg = document.createElement("img");
+                explImg.src = explanations[i] + "?t=" + new Date().getTime();
+                explImg.alt = "Explicație vizuală (Grad-CAM++)";
+                explImg.style.marginTop = "6px";
+                card.appendChild(explImg);
+            }
+
+            if (shapImages[i]) {
+                const shapLabel = document.createElement("p");
+                shapLabel.textContent = "Hartă Integrated Gradients";
+                shapLabel.style.marginTop = "10px";
+                shapLabel.style.fontWeight = "bold";
+                card.appendChild(shapLabel);
+
+                const shapImg = document.createElement("img");
+                shapImg.src = shapImages[i] + "?t=" + new Date().getTime();
+                shapImg.alt = "Explicație vizuală (IG)";
+                shapImg.style.marginTop = "6px";
+                card.appendChild(shapImg);
+            }
+
+            regionResultsContainer.appendChild(card);
+        }
+    } catch (error) {
+        overlayLoader.classList.remove("active");
+        console.error("Eroare:", error);
+        alert("A apărut o eroare la procesarea imaginii.");
+    }
+});
+function drawImageAndBoxes(file, detections) {
+    const canvas = document.querySelector("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            const maxWidth = 850;
+            const scale = Math.min(maxWidth / img.width, 1);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            ctx.strokeStyle = "#27ae60";
+            ctx.lineWidth = 3;
+            ctx.font = "bold 18px Arial";
+            ctx.fillStyle = "#27ae60";
+
+            detections.forEach((det, i) => {
+                const [x1, y1, x2, y2, conf, label] = det;
+                const sx1 = x1 * scale;
+                const sy1 = y1 * scale;
+                const sx2 = x2 * scale;
+                const sy2 = y2 * scale;
+                const width = sx2 - sx1;
+                const height = sy2 - sy1;
+
+                // Desenează chenarul
+                ctx.strokeRect(sx1, sy1, width, height);
+
+                // Scrie indexul regiunii
+                ctx.fillText(`#${i + 1}`, sx1 + 4, sy1 - 6);
+            });
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
 
         // Help modal functionality
         const helpButton = document.getElementById("helpButton");
@@ -586,15 +619,16 @@
             updateDarkIcon(isDark);
         };
 
-        // Modal pentru imagine mărită
+
         const modal = document.getElementById("imageModal");
         const modalImg = document.getElementById("modalImage");
         const closeModal = document.getElementById("closeModal");
 
         regionResultsContainer.addEventListener("click", (e) => {
             if (e.target.tagName === "IMG") {
+                const full = e.target.dataset.fullImage;
                 modal.style.display = "block";
-                modalImg.src = e.target.src;
+                modalImg.src = full ? full : e.target.src;
             }
         });
 
@@ -606,7 +640,43 @@
             if (e.target === modal) {
                 modal.style.display = "none";
             }
-        };
+};
+
+   const uploadInput = document.getElementById('uploadInput');
+  const fileName = document.getElementById('fileName');
+  const maxSizeMB = 10;
+  const allowedExtensions = ['jpg', 'jpeg', 'png'];
+
+  uploadInput.addEventListener('change', function () {
+    if (this.files && this.files.length > 0) {
+      const file = this.files[0];
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+
+      // Verificare extensie
+      if (!allowedExtensions.includes(fileExtension)) {
+        fileName.style.color = 'red';
+        fileName.textContent = 'Format invalid. Te rugăm să alegi un fișier .jpg, .jpeg sau .png.';
+        this.value = ''; // Resetează inputul
+        return;
+      }
+
+      // Verificare dimensiune
+      if (file.size > maxSizeMB * 1024 * 1024) {
+        fileName.style.color = 'red';
+        fileName.textContent = 'Fișier prea mare. Dimensiunea maximă permisă este 10MB.';
+        this.value = '';
+        return;
+      }
+
+      // Fișier valid
+      fileName.style.color = '#555';
+      fileName.textContent = 'Fișier selectat: ' + file.name;
+    } else {
+      fileName.textContent = '';
+    }
+  });
+
+
     </script>
 </body>
 </html>
