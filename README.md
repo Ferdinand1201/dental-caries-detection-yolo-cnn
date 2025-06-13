@@ -31,7 +31,7 @@ Acest repository conține codul sursă pentru un sistem inteligent de detecție 
 * `best.pt` – Modelul YOLOv8 antrenat pe 30 de epoci
 * `model_cnn.pth` – Modelul CNN antrenat pentru clasificarea imaginilor dentare
 
-  ### Resurse și configurări
+### Resurse și configurări
 
 * `README.md` - Documentația proiectului
 * `requirements.txt`- lista completă a pachetelor Python necesare
@@ -45,19 +45,16 @@ Acest repository conține codul sursă pentru un sistem inteligent de detecție 
 
 ## Date de antrenare
 
-Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetninja.com/dentalai. Pentru a utiliza acest set de date, este necesară conversia sa în formatul YOLOv8 folosind notebook-ul convert.ipynb
+Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetninja.com/dentalai. Pentru a utiliza acest set de date, este necesară conversia sa în formatul YOLOv8 folosind notebook-ul `convert.ipynb`
 
 
 ## Instrucțiuni de instalare
 
 * Clonează acest repository
 * Instalează dependințele: **pip install -r requirements.txt**
-
-## Pornește serverul Flask
-
-* Asigură-te că fișierele object_detector.py, index.html, best.pt și model_cnn.pth sunt în același director
-* Rulează
-
+* Asigură-te că fișierele `object_detector.py`, `index.html`, `best.pt` și `model_cnn.pth` sunt în același director
+* Rulează serverul local
+* 
 ```
 python object_detector.py
 ```
