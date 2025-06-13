@@ -1,47 +1,68 @@
-# The caries detection web-service using the YOLOv8 neural network
+# Serviciu web pentru detectarea cariilor dentare utilizând rețeaua neuronală YOLOv8 și clasificare explicabilă cu CNN
 
-This repository contains the YOLOv8 object detection web service, that detects caries and other teeth deceases on images. Also, it contains additional scripts, that can be used to prepare the source dataset, to train the model and run test predictions.
+Acest repository conține codul sursă pentru un sistem inteligent de detecție a cariilor dentare, dezvoltat ca parte a lucrării mele de licență. Sistemul utilizează modelul YOLOv8 pentru detectarea automată a zonelor afectate din imagini dentare și un clasificator CNN pentru analiza detaliată a regiunilor decupate, însoțită de explicații vizuale generate prin tehnici de tip XAI (Grad-CAM++ și Integrated Gradients).
 
-The DentalAI dataset used to train the model. You can download it from here: https://datasetninja.com/dentalai. If you want to run your own training process, you need to convert it to the YOLOv8 format, using the script in the `convert.ipynb` notebook.
+## Funcționalități principale
 
-This is a source code for the [Teeth caries detection using YOLOv8 neural network](https://dev.to/andreygermanov/teeth-caries-detection-using-yolov8-neural-network-3fap). Read it to learn in detail how this code created and works.
+* Detecția cariilor dentare în imagini intraorale, utilizând modelul YOLOv8.
 
-## Contents
+* Clasificarea regiunilor suspecte în carie / non-carie cu ajutorul unui CNN bazat pe ResNet-18.
 
-* `convert.ipynb` - The Supervisely to YOLOv8 converter, used to convert the dataset to YOLOv8 format
-* `train.ipynb` - The code to train the YOLOv8 model using converted dataset
-* `predict.ipynb` - The code, that can be used to run and visualize caries detection on custom images, using the trained model
-* `best.pt` - The trained YOLOv8 model on 30 epochs to detect caries, cavity and cracks on teeth
-* `object_detector.py` - The backend of a web service
-* `index.html` - The frontend of a web service
-* `caries.jpg` - Sample teeth with caries image
+* Generarea de explicații vizuale pentru deciziile CNN, folosind metodele Grad-CAM++ și Integrated Gradients.
 
-## Demo
+* Interfață web prietenoasă, care permite încărcarea imaginilor și vizualizarea predicțiilor și explicațiilor.
 
-Watch this video: https://youtu.be/OzpPIsxB_4U
+* Posibilitatea de a mări regiunile decupate și de a vizualiza în detaliu zonele evidențiate de AI
+  
+## Structura proiectului
 
-## Install
+* `convert.ipynb` – Conversie din formatul Supervisely în format YOLOv8.
+* `train.ipynb` – Script de antrenare pentru modelul YOLOv8.
+* `train_caries_classifier.py` – Script de antrenare a clasificatorului CNN ResNet-18 pe regiunile decupate.
+* `cnn_explainer.py` – Modul pentru generarea explicațiilor Grad-CAM++ și Integrated Gradients pentru clasificator
+* `object_detector.py` – Backend Flask care gestionează logica de detecție, clasificare și explicabilitate.
+* `index.html` – Interfața web a aplicației.
+* `best.pt` – Modelul YOLOv8 antrenat pe 30 de epoci
+* `model_cnn.pth` – Modelul CNN antrenat pentru clasificarea imaginilor dentare.
+* caries.jpg – Exemplu de imagine dentară cu carii.
 
-* Clone this repository
-* Install dependencies: **pip3 install -r requirements.txt**
+## Date de antrenare
 
-## Run web service
+Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetninja.com/dentalai. Pentru a utiliza acest set de date, este necesară conversia sa în formatul YOLOv8 folosind notebook-ul convert.ipynb
 
-* Ensure that the `object_detector.py`, `index.html` and `best.pt` files located in the same folder
-* Run
+
+## Instrucțiuni de instalare
+
+* Clonează acest repository
+* Instalează dependendințele: **pip install -r requirements.txt**
+
+## Pornește serverul Flask
+
+* Asigură-te că fișierele object_detector.py, index.html, best.pt și model_cnn.pth sunt în același director
+* Rulează
 
 ```
 python object_detector.py
 ```
 
-The web interface will be available on **http://localhost:8080** address. You can upload the teeth image and see if it contains caries.
+Aplicația va fi disponibilă la adresa: http://localhost:8080
 
-# About This Version
+# Despre această versiune
 
-This repository is a modified version of the original yolov8_caries_detector by Andrey Germanov.
+Acest proiect reprezintă o versiune extinsă a repository-ului original yolov8_caries_detector, creat de Andrey Germanov.
 
-In this version, I have extended the project by adding a separate CNN classifier applied on the crops extracted from YOLOv8 detections for improved caries classification. Additionally, I integrated explainability functionalities specifically for the CNN model, including Grad-CAM and SHAP techniques to generate visual explanations of the CNN’s predictions. I also developed additional scripts to support training, evaluation, and integration with the YOLOv8 detection pipeline.
+Modificările și contribuțiile proprii includ:
 
-These enhancements were implemented as part of my bachelor thesis on dental caries detection.
+* Integrarea unui clasificator CNN separat (ResNet-18) aplicat pe regiunile decupate de YOLOv8, pentru o analiză binară carie / non-carie.
 
-The original author’s work is gratefully acknowledged.
+* Implementarea de funcționalități XAI pentru clasificator, folosind metodele Grad-CAM++ și Integrated Gradients.
+
+* Generarea de imagini explicative pentru fiecare regiune detectată, vizibile direct în interfața web.
+
+* Dezvoltarea completă a unei interfețe web moderne și interactive, cu funcționalități de zoom, mod întunecat și validare a fișierelor.
+
+* Optimizări pentru scalabilitate locală, salvare automată a rezultatelor, sortarea regiunilor detectate și afișare organizată.
+
+Toate aceste îmbunătățiri au fost realizate în cadrul lucrării mele de licență, sub îndrumarea prof. univ. dr. Darian Onchiș.
+
+Mulțumiri autorului original pentru codul de bază folosit ca punct de plecare în această cercetare.
