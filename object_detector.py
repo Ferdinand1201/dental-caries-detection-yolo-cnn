@@ -90,8 +90,8 @@ def crop_yolo_detections(image, detections, output_dir=CROPS_DIR):
         x1, y1, x2, y2, class_name = det
 
         # Adaugă padding pentru a păstra contextul vizual
-        pad_x = int((x2 - x1) * 0.1)
-        pad_y = int((y2 - y1) * 0.1)
+        pad_x = int((x2 - x1) * 0.2)
+        pad_y = int((y2 - y1) * 0.2)
 
         x1 = max(0, x1 - pad_x)
         y1 = max(0, y1 - pad_y)
