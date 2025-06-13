@@ -175,7 +175,7 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
 
         plt.figure(figsize=(8, 8))
         plt.imshow(image_np)
-        plt.imshow(attr_norm, alpha=0.7, cmap='magma')
+        plt.imshow(attr_norm, alpha=0.6, cmap='magma')
         plt.axis('off')
         plt.tight_layout()
         plt.savefig(output_path, bbox_inches='tight', dpi=150, facecolor='white')
