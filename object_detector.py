@@ -1,3 +1,10 @@
+"""
+object_detector.py – Backend Flask pentru sistemul de detecție și clasificare a cariilor dentare.
+
+Acest serviciu primește imagini dentare, aplică modelul YOLOv8 pentru detecție, clasifică regiunile decupate folosind
+un model CNN și generează explicații vizuale prin Grad-CAM++ și Integrated Gradients.
+"""
+
 from ultralytics import YOLO
 from flask import request, Flask, jsonify, send_from_directory, make_response
 from torchvision import transforms
@@ -5,18 +12,27 @@ import torch
 from PIL import Image
 import os
 import uuid
+import logging
 from cnn_explainer import generate_gradcam, generate_shap, load_cnn_model, load_background, create_explainer
 
+# Directorul de bază al aplicației
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+# Inițializare aplicație Flask
 app = Flask(__name__)
 
-print("Loading YOLO model...")
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+# Încărcarea modelului YOLOv8 pentru detecția cariilor
+
+logging.info("Se încarcă modelul YOLOv8...")
 yolo_model = YOLO("best.pt")
 
-print("Loading CNN model...")
+# Încărcarea modelului CNN antrenat pentru clasificare carie/non-carie
+
+logging.info("Se încarcă modelul CNN pentru clasificare...")
 cnn_model = load_cnn_model("model_cnn.pth")
 
+# Selectarea imaginilor de fundal pentru explicabilitate cu Integrated Gradients
 fara_carie_dir = os.path.join(BASE_DIR, "dataset/train/fara_carie")
 background_paths = [
     os.path.join(fara_carie_dir, fname)
@@ -26,12 +42,18 @@ background_paths = [
 
 background_images = [Image.open(p).convert("RGB") for p in background_paths]
 shap_explainer = create_explainer(cnn_model, background_images)
+
+# Creează directoarele în care se vor salva imaginile decupate (YOLO) și explicațiile vizuale (Grad-CAM++, Integrated Gradients).
+# Acestea sunt păstrate pentru afișare și analiză ulterioară.
 CROPS_DIR = "crops"
 EXPLANATIONS_DIR = "explanations"
 os.makedirs(CROPS_DIR, exist_ok=True)
 os.makedirs(EXPLANATIONS_DIR, exist_ok=True)
 
 def detect_objects_on_image(image):
+    """
+    Redimensionează imaginea, aplică YOLOv8 și extrage coordonatele predicțiilor pentru carii.
+    """
     orig_width, orig_height = image.size
     resized_image = image.resize((640, 640))
     transform = transforms.ToTensor()
@@ -47,26 +69,27 @@ def detect_objects_on_image(image):
     for box in result.boxes:
         x1, y1, x2, y2 = [x.item() for x in box.xyxy[0]]
         class_id = int(box.cls[0].item())
-        if class_id != 0:  # filtrăm doar clasa 'carie' (presupun că este clasa 0)
-            continue
-        # Opțional: poți salva și probabilitatea dacă dorești
+        if class_id != 0:
+            continue  # Păstrăm doar clasele de tip "carie"
         x1 = round(x1 * scale_x)
         y1 = round(y1 * scale_y)
         x2 = round(x2 * scale_x)
         y2 = round(y2 * scale_y)
-
         output.append([x1, y1, x2, y2, result.names[class_id]])
 
     return output
 
-
 def crop_yolo_detections(image, detections, output_dir=CROPS_DIR):
+    """
+    Decupează fiecare regiune detectată și salvează două versiuni: 224x224 și 1024x1024.
+    """
     img_width, img_height = image.size
     cropped_paths = []
 
     for i, det in enumerate(detections):
         x1, y1, x2, y2, class_name = det
 
+        # Adaugă padding pentru a păstra contextul vizual
         pad_x = int((x2 - x1) * 0.1)
         pad_y = int((y2 - y1) * 0.1)
 
@@ -79,11 +102,13 @@ def crop_yolo_detections(image, detections, output_dir=CROPS_DIR):
         unique_id = uuid.uuid4().hex[:8]
         crop_filename = f"{class_name}_{i}_{unique_id}.png"
 
-        full_crop_resized = crop.resize((1024, 1024), Image.BICUBIC)
+        # Versiune mărită (pentru afișare în interfață)
+        full_crop_resized = crop.resize((1024,1024), Image.BICUBIC)
         full_crop_filename = f"full_{crop_filename}"
         full_crop_path = os.path.join(output_dir, full_crop_filename)
         full_crop_resized.save(full_crop_path, format='PNG', optimize=False)
 
+        # Versiune redimensionată pentru clasificare CNN
         resized_crop = crop.resize((224, 224), Image.BICUBIC)
         crop_path = os.path.join(output_dir, crop_filename)
         resized_crop.save(crop_path, format='PNG', optimize=False)
@@ -92,14 +117,15 @@ def crop_yolo_detections(image, detections, output_dir=CROPS_DIR):
 
     return cropped_paths
 
-
 def sort_detections_by_grid(detections, row_threshold=50):
-
+    """
+    Sortează regiunile detectate în funcție de poziția lor verticală și orizontală în imagine.
+    """
     if not detections:
         return []
 
     detections = [list(det) for det in detections]
-    detections_with_center_y = [(det, (det[1] + det[3]) / 2) for det in detections]  # y_center
+    detections_with_center_y = [(det, (det[1] + det[3]) / 2) for det in detections]  # centrul vertical
     detections_with_center_y.sort(key=lambda x: x[1])
 
     sorted_groups = []
@@ -110,7 +136,7 @@ def sort_detections_by_grid(detections, row_threshold=50):
         if abs(y_center - current_y) < row_threshold:
             current_group.append(det)
         else:
-            current_group.sort(key=lambda d: d[0])
+            current_group.sort(key=lambda d: d[0])  # sortare orizontală
             sorted_groups.extend(current_group)
             current_group = [det]
             current_y = y_center
@@ -122,24 +148,26 @@ def sort_detections_by_grid(detections, row_threshold=50):
 
 @app.route("/")
 def root():
+    """Răspunde cu pagina principală HTML"""
     with open("index.html", encoding="utf-8") as file:
         content = file.read()
     response = make_response(content)
     response.headers["Content-Type"] = "text/html; charset=utf-8"
     return response
 
-
+# Maparea etichetelor numerice la etichete semantice
 class_names = {0: "carie", 1: "non-carie"}
-
 
 @app.route("/detect", methods=["POST"])
 def detect():
+    """
+    Endpoint principal care primește o imagine, aplică detecție, clasificare și generare explicații.
+    """
     if "image_file" not in request.files:
         return jsonify({"error": "No image file uploaded"}), 400
 
     buf = request.files["image_file"]
     image = Image.open(buf.stream).convert("RGB")
-
 
     detections = detect_objects_on_image(image)
     detections = sort_detections_by_grid(detections)
@@ -165,14 +193,19 @@ def detect():
 
         region_id = os.path.splitext(os.path.basename(crop_path))[0]
 
-
+        # Explicație vizuală cu Grad-CAM++
         explanation_path, predicted_class, confidence = generate_gradcam(crop_image, cnn_model, region_id=region_id)
         explanation_url = f"/explanations/Grad-CAM++/{os.path.basename(explanation_path)}"
         gradcam_image_urls.append(explanation_url)
 
-
+        # Explicație alternativă cu Integrated Gradients
         try:
-            shap_path = generate_shap(cnn_model, crop_path, output_path=f"explanations/IntegratedGradients/integrated_gradients_{region_id}.png",region_id=region_id)
+            shap_path = generate_shap(
+                cnn_model,
+                crop_path,
+                output_path=f"explanations/IntegratedGradients/integrated_gradients_{region_id}.png",
+                region_id=region_id
+            )
             shap_url = f"/explanations/IntegratedGradients/{os.path.basename(shap_path)}"
         except Exception as e:
             print(f"Integrated Gradients failed for {region_id}: {e}")
@@ -181,7 +214,6 @@ def detect():
         shap_image_urls.append(shap_url)
         cnn_predictions.append(class_names.get(predicted_class, "necunoscut"))
         cnn_confidences.append(round(confidence * 100, 2))
-
 
     return jsonify({
         "detections": detections,
@@ -193,20 +225,20 @@ def detect():
         "cnn_confidences": cnn_confidences
     })
 
-
 @app.route('/crops/<path:filename>')
 def serve_crop(filename):
+    """Servește imaginile decupate pentru afișare în interfață"""
     return send_from_directory(CROPS_DIR, filename)
-
 
 @app.route('/explanations/<path:filename>')
 def serve_explanation(filename):
+    """Servește imaginile de explicație generate de XAI"""
     full_path = os.path.join(EXPLANATIONS_DIR, filename)
     folder = os.path.dirname(full_path)
     file = os.path.basename(full_path)
     return send_from_directory(folder, file)
 
-
 if __name__ == "__main__":
+    # Pornirea serverului folosind waitress (pentru producție locală)
     from waitress import serve
     serve(app, host="0.0.0.0", port=8080, threads=2)

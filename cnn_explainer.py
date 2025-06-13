@@ -1,3 +1,10 @@
+"""
+cnn_explainer.py – Modul pentru generarea de explicații vizuale asupra predicțiilor CNN.
+
+Acest fișier conține funcționalități pentru încărcarea unui model CNN, generarea de explicații Grad-CAM++ și
+Integrated Gradients, utile pentru interpretarea clasificării imaginilor decupate din regiunile detectate de YOLOv8.
+"""
+
 import os
 import torch
 import torchvision.models as models
@@ -6,6 +13,7 @@ from torchvision.models import ResNet18_Weights
 from torchvision.transforms import InterpolationMode
 from PIL import Image
 import numpy as np
+import logging
 from pytorch_grad_cam import GradCAMPlusPlus
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
@@ -13,10 +21,13 @@ import shap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
+# Selectare device (GPU dacă este disponibil)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_cnn_model(path):
+    """Încarcă un model ResNet18 antrenat pentru clasificarea imaginilor dentare în 2 clase: carie și non-carie"""
     if not os.path.exists(path):
         raise FileNotFoundError(f"Model file not found at {path}")
 
@@ -27,7 +38,7 @@ def load_cnn_model(path):
     model.eval()
     return model
 
-# Transformare imagine pentru model
+# Transformări standard pentru imagine (resize + normalize pentru ResNet)
 transform = transforms.Compose([
     transforms.Resize((224, 224), interpolation=InterpolationMode.BICUBIC),
     transforms.ToTensor(),
@@ -36,6 +47,14 @@ transform = transforms.Compose([
 ])
 
 def generate_gradcam(pil_image, model, region_id="0"):
+    """
+      Generează o explicație vizuală de tip Grad-CAM++ pentru imaginea dată, utilizând modelul CNN furnizat.
+
+      Imaginea este redimensionată și normalizată, apoi este transmisă prin rețea pentru a obține predicția și
+      scorul de încredere. Se identifică stratul de convoluție final ca țintă pentru maparea activă, iar Grad-CAM++
+      este aplicat pentru a produce o hartă de atenție care evidențiază regiunile relevante pentru predicția finală.
+   """
+    logging.info(f"Generare explicație Grad-CAM++ pentru regiunea {region_id}")
     model.eval()
     input_tensor = transform(pil_image).unsqueeze(0).to(device)
     rgb_image = pil_image.resize((224, 224), resample=Image.BICUBIC)
@@ -59,15 +78,23 @@ def generate_gradcam(pil_image, model, region_id="0"):
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, f"gradcam++_{region_id}.png")
     Image.fromarray(visualization).resize((1024, 1024), resample=Image.BICUBIC).save(output_path)
+    logging.info(f"Explicația a fost salvată în {output_path.replace(os.sep, '/')}")
 
     return output_path, predicted_class, confidence
 
 def disable_inplace_relu(model):
+    """
+    Parcurge toate layerele ReLU din model și dezactivează execuția in-place.
+    Această operație este necesară pentru ca metodele de explicabilitate bazate pe gradient (Grad-CAM, IG)
+    să poată reconstrui corect graficul de computație pentru backpropagation.
+    """
+
     for mod in model.modules():
         if isinstance(mod, torch.nn.ReLU):
             mod.inplace = False
 
 def load_background(background_paths):
+    """Încarcă imaginile de fundal pentru Integrated Gradients"""
     background_images = []
     for img_path in background_paths:
         img = Image.open(img_path).convert("RGB")
@@ -75,6 +102,10 @@ def load_background(background_paths):
     return background_images
 
 def create_explainer(model, background_images):
+    """
+     Creează un explainer cu imagini de fundal pentru o metodă personalizată de tip Integrated Gradients.
+     Deși obiectul returnat este creat cu shap.GradientExplainer, metoda SHAP propriu-zisă nu este folosită.
+     """
     disable_inplace_relu(model)
     model.eval()
     model.to(device)
@@ -88,19 +119,21 @@ def create_explainer(model, background_images):
     explainer = shap.GradientExplainer(model, background_batch)
     return explainer
 
-
 def generate_shap(cnn_model, image_path, output_path="integrated_gradients_output.png", region_id=None):
     """
-       Funcție redenumită istoric ca 'generate_shap', care implementează de fapt o metodă personalizată
-       de explicabilitate vizuală bazată pe Integrated Gradients, pentru a evita limitările bibliotecii SHAP.
-       """
+      Generează o explicație vizuală folosind o metodă personalizată de tip Integrated Gradients,
+      fără a apela funcțiile standard din biblioteca SHAP.
+
+      Procesul implică interpolări liniare între o imagine de bază (baseline) și imaginea țintă,
+      urmate de acumularea gradientului pentru clasa prezisă.
+
+      Returnează o hartă de atenție salvată pe disc, care evidențiază zonele relevante pentru predicție.
+      """
     try:
-        print(f"[INFO] Generating explanation for {region_id}...")
-        print(f"[DEBUG] image_path type: {type(image_path)}")
-        print(f"[DEBUG] image_path value: {image_path}")
+        logging.info(f"Generare explicație Integrated Gradients pentru regiunea {region_id}")
 
         if not isinstance(image_path, (str, bytes, os.PathLike)):
-            raise ValueError(f"Invalid image_path type: {type(image_path)}. Expected string path, got {image_path}")
+            raise ValueError(f"Invalid image_path type: {type(image_path)}")
 
         if not os.path.exists(image_path):
             raise FileNotFoundError(f"Image file not found: {image_path}")
@@ -117,8 +150,6 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
         predicted_class = torch.argmax(probabilities, dim=1).item()
         confidence = torch.max(probabilities).item()
 
-        print(f"[INFO] Prediction: Class {predicted_class}, Confidence: {confidence:.3f}")
-
         baseline = input_tensor * 0.2
         steps = 50
         integrated_grads = torch.zeros_like(input_tensor)
@@ -129,16 +160,10 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
             interpolated.requires_grad_(True)
 
             output = cnn_model(interpolated)
-            target_class = predicted_class
-            target_score = output[0, target_class]
+            target_score = output[0, predicted_class]
 
-            grad = torch.autograd.grad(outputs=target_score,
-                                       inputs=interpolated,
-                                       create_graph=False,
-                                       retain_graph=False)[0]
-
+            grad = torch.autograd.grad(outputs=target_score, inputs=interpolated)[0]
             integrated_grads += grad / steps
-
 
         attributions = (input_tensor - baseline) * integrated_grads
         attr_np = attributions.squeeze().detach().cpu().numpy()
@@ -147,6 +172,7 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
 
         attr_sum = np.sum(np.abs(attr_np), axis=2)
         attr_norm = (attr_sum - attr_sum.min()) / (attr_sum.max() - attr_sum.min() + 1e-8)
+
         plt.figure(figsize=(8, 8))
         plt.imshow(image_np)
         plt.imshow(attr_norm, alpha=0.7, cmap='magma')
@@ -155,11 +181,11 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
         plt.savefig(output_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
 
-        print(f"[INFO] Explanation saved to {output_path}")
+        logging.info(f"Explicația a fost salvată în {output_path.replace(os.sep, '/')}")
         return output_path
 
     except Exception as e:
-        print(f"[ERROR] Explanation generation failed: {e}")
+        logging.error(f"Generarea explicației a eșuat: {e}")
         import traceback
         traceback.print_exc()
 
@@ -169,26 +195,22 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
 
             plt.figure(figsize=(6, 6))
             plt.imshow(np.array(resized_pil) / 255.0, interpolation='bilinear')
-
             plt.title(f'Explanation Failed\nRegion: {region_id}\nShowing original image')
             plt.axis('off')
 
             os.makedirs(os.path.dirname(output_path), exist_ok=True)
-            plt.savefig(output_path, bbox_inches='tight')
+            plt.savefig(output_path, dpi = 100)
             plt.close()
 
-            print(f"[INFO] Fallback image saved to {output_path}")
+            logging.warning(f"Imagine fallback salvată la: {output_path}")
             return output_path
 
         except Exception as fallback_error:
-            print(f"[ERROR] Fallback also failed: {fallback_error}")
+            logging.error(f"Eroare și la salvarea fallback: {fallback_error}")
             return None
 
-
-# Pentru testare locală, înlocuiește `image_path` cu o imagine crop reală și rulează:
-# python cnn_explainer.py
-
 if __name__ == "__main__":
+    # Exemplu de rulare standalone pentru testare locală
     model_path = "model_cnn.pth"
     image_path = "cale_catre_imagine_cropata.jpg"
     background_paths = [

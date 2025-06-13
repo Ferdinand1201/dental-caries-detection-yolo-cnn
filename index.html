@@ -1,3 +1,22 @@
+<!--
+  index.html – Interfață web pentru aplicația CarioScan
+
+  Acest fișier reprezintă componenta frontend a aplicației de diagnostic stomatologic automatizat.
+  Include cod HTML, CSS și JavaScript într-o singură pagină, permițând utilizatorului:
+    - să încarce o imagine dentară (radiografie sau fotografie intraorală),
+    - să vizualizeze detecțiile efectuate de YOLOv8 (chenare pe canvas),
+    - să analizeze regiuni decupate din imagine, fiecare cu clasificare CNN (carie / non-carie),
+    - să observe explicațiile vizuale generate automat: Grad-CAM++ și Integrated Gradients (XAI),
+    - să comute între modul Light / Dark,
+    - să acceseze o fereastră de Ajutor și să mărească imaginile individuale.
+
+  Secțiuni:
+    - <style>  conține stilurile CSS pentru interfață modernă, responsive, Dark Mode
+    - <body>   conține structura UI: titlu, formular, rezultate, footer, modale
+    - <script> implementează logica clientului: încărcare imagine, trimitere spre backend,
+                     afișare rezultate, zoom imagini, spinner loader, toggle dark mode, validare input
+-->
+
 <!DOCTYPE html>
 <html lang="ro">
 <head>
@@ -5,6 +24,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YOLOv8 - Detectarea Cariilor</title>
   <style>
+      /* Stiluri generale pentru body, titluri și structură  */
     body {
       font-family: 'Arial', sans-serif;
       background-color: #f4f4f4;
@@ -24,14 +44,15 @@
     h2 {
       text-align: center;
       color: #34495e;
-      margin-top: 20px;
+      margin-top: 40px;
       font-size: 24px;
     }
-
+    /*  Container pentru încărcarea fișierului  */
     .file-input-container {
       text-align: center;
       max-width: 700px;
       margin: 0 auto 10px auto;
+      margin-top: 24px;
     }
 
     .file-input-container p {
@@ -63,7 +84,7 @@
 
     canvas {
       display: block;
-      margin: 20px auto 40px auto;
+      margin: 32px auto 48px auto;
       border: 3px solid #3498db;
       background-color: white;
       max-width: 90%;
@@ -71,6 +92,8 @@
       border-radius: 12px;
       box-shadow: 0 6px 18px rgba(52, 152, 219, 0.25);
     }
+
+    /*  Afișare rezultate pe regiuni  */
 
     .region-results {
       display: flex;
@@ -133,25 +156,26 @@
     }
 
     .custom-upload-button {
-  display: inline-block;
-  padding: 12px 24px;
-  background-color: #3498db;
-  color: white;
-  font-weight: bold;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: background-color 0.3s ease;
-  margin-bottom: 10px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
+      display: inline-block;
+      padding: 12px 24px;
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s ease;
+      margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+     }
 
-.custom-upload-button:hover {
-  background-color: #2980b9;
-}
+    .custom-upload-button:hover {
+      background-color: #2980b9;
+    }
 
 
-    /* Help button */
+    /*  Stiluri pentru butonul de ajutor și fereastra modală  */
+
     #helpButton {
       position: fixed;
       bottom: 20px;
@@ -222,7 +246,7 @@
       color: #444;
     }
 
-    /* Dark Mode */
+   /*  Mod întunecat (dark mode)  */
     body.dark {
       background-color: #1e1e1e;
       color: #eee;
@@ -268,7 +292,7 @@
       z-index: 1100;
     }
 
-    /* Spinner Loader */
+    /*  Loader (spinner de procesare imagine)  */
     #overlay-loader {
       display: none;
       position: fixed;
@@ -313,6 +337,7 @@
       100% { transform: rotate(360deg); }
     }
 
+    /* Responsivitate pentru mobil  */
     @media (max-width: 768px) {
       h1 { font-size: 28px; padding: 0 10px; }
       h2 { font-size: 20px; padding: 0 10px; }
@@ -329,7 +354,21 @@
       height: auto;
     }
 
-    /* Image Zoom Modal */
+    /*  Modal pentru zoom imagine  */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1500;
+      padding-top: 60px;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+
+        /*  Modal pentru zoom imagine  */
     .modal {
       display: none;
       position: fixed;
@@ -350,6 +389,22 @@
       max-height: 80%;
       border-radius: 12px;
       box-shadow: 0 0 25px rgba(0, 0, 0, 0.6);
+      image-rendering: crisp-edges;
+      object-fit: contain;
+    }
+
+    .close {
+      position: absolute;
+      top: 20px;
+      right: 40px;
+      color: #ffffff;
+      font-size: 40px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .close:hover {
+      color: #f1c40f;
     }
 
     .close {
@@ -368,78 +423,103 @@
   </style>
 </head>
 
-
 <body>
-    <h1>YOLOv8 - Detectarea Cariilor</h1>
-    <p style="text-align:center; font-style: italic; color: #7f8c8d;">
-        Un asistent inteligent de diagnostic dentar cu inteligență artificială explicabilă (XAI)
-    </p>
 
-    <div class="file-input-container">
-      <p>Alege o imagine pentru a detecta carii dentare și a vizualiza zonele decupate:</p>
+  <!-- Titlul principal al aplicației -->
+  <h1>CarioScan</h1>
 
-      <label for="uploadInput" class="custom-upload-button">Alege fișierul</label>
-      <input id="uploadInput" type="file" accept="image/*" style="display: none;" />
+  <!-- Subtitlu descriptiv -->
+  <p style="text-align:center; font-style: italic; color: #7f8c8d; margin-bottom: 50px">
+    Asistent inteligent pentru diagnostic stomatologic bazat pe inteligență artificială explicabilă (XAI)
+  </p>
 
-      <p id="fileName" style="margin-top: 10px; font-style: italic; color: #555;"></p>
+  <!-- Containerul de upload imagine -->
+  <div class="file-input-container">
+    <p>Încarcă o imagine dentară pentru a detecta automat carii și a vizualiza regiunile analizate:</p>
+
+    <!-- Buton personalizat pentru încărcare fișier -->
+    <label for="uploadInput" class="custom-upload-button">Selectează fișierul</label>
+    <input id="uploadInput" type="file" accept="image/*" style="display: none;" />
+
+    <!-- Afișează numele fișierului încărcat -->
+    <p id="fileName" style="margin-top: 20px; font-style: italic; font-size: 13px; opacity: 0.85 ;color: #555;"></p>
+  </div>
+
+  <!-- Canvas pentru afișarea imaginii originale cu chenar -->
+  <canvas></canvas>
+
+  <!-- Titlu pentru rezultatele pe regiuni -->
+  <h2>Rezultatele analizei pe regiuni detectate:</h2>
+
+  <!-- Container pentru cardurile cu rezultate (cropuri + explicații) -->
+  <div class="region-results" id="region-results-container"></div>
+
+  <!-- Footer aplicație -->
+  <div class="footer">
+    <p>&copy; 2025 CarioScan – Sistem AI explicabil pentru diagnostic stomatologic</p>
+  </div>
+
+  <!-- Buton ajutor în colțul din dreapta jos -->
+  <button id="helpButton" title="Help" aria-label="Deschide fereastra de ajutor">?</button>
+
+  <!-- Fereastră modală pentru ajutor  -->
+  <div id="helpModal">
+    <div>
+      <h2>Ajutor</h2>
+      <p>
+        1. Apasă pe „Selectează fișierul” pentru a încărca o imagine dentară. <br/>
+        2. Sistemul va detecta automat zonele suspecte de carie folosind un model AI avansat.<br/>
+        3. Vei vedea imaginea originală cu zonele evidențiate, alături de secțiuni decupate și explicații vizuale (Grad-CAM++, Integrated Gradients).<br/>
+        4. Dacă întâmpini probleme, verifică formatul (JPG, JPEG, PNG) și dimensiunea (max. 10 MB).<br/>
+        5. Pentru întrebări sau feedback, contactează echipa de suport la: <br/>
+        <b><a href="mailto:ferdinand.trefil03@e-uvt.ro">ferdinand.trefil03@e-uvt.ro</a></b>.
+      </p>
+      <button id="closeHelp" title="Închide">×</button>
     </div>
+  </div>
 
-    <canvas></canvas>
+  <!-- Comutator mod întunecat / mod luminos -->
+  <button id="darkModeToggle" class="dark-toggle-btn" aria-label="Comută la modul întunecat" title="Dark mode/Light mode">
+    <svg id="darkIcon" width="32" height="32" viewBox="0 0 24 24" fill="#3498db" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21.64 13a9 9 0 01-10.6-10.6 1 1 0 00-1.27-1.27 11 11 0 1013.14 13.14 1 1 0 00-1.27-1.27z"/>
+    </svg>
+  </button>
 
-    <h2>Rezultatele pentru fiecare regiune detectată:</h2>
-    <div class="region-results" id="region-results-container"></div>
+  <!-- Suprapunere cu spinner de încărcare (afișat în timpul predicției) -->
+  <div id="overlay-loader">
+    <div class="spinner"></div>
+    <p class="loader-text">Se procesează imaginea...</p>
+  </div>
 
-    <div class="footer">
-        <p>&copy; 2025 YOLOv8 - Detectarea Cariilor</p>
-    </div>
+  <!-- Modal pentru afișarea mărită a imaginilor (cropuri sau explicații) -->
+  <div id="imageModal" class="modal">
+    <span id="closeModal" class="close">&times;</span>
+    <img class="modal-content" id="modalImage">
+  </div>
 
-    <button id="helpButton" title="Help" aria-label="Deschide fereastra de ajutor">?</button>
+  <script>
 
-    <div id="helpModal">
-        <div>
-            <h2>Ajutor</h2>
-            <p>
-                1. Apasă pe butonul „Alege fișierul” pentru a încărca o fotografie dentară. <br/>
-                2. Sistemul va detecta automat zonele suspecte de carie folosind un model AI avansat.<br/>
-                3. Vei vedea imaginea originală cu zonele evidențiate, alături de secțiuni decupate și explicații vizuale (Grad-CAM++, Integrated Gradients).<br/>
-                4. Dacă întâmpini probleme, asigură-te că imaginea este în format JPG, PNG sau JPEG și are o dimensiune mai mică de 10MB.<br/>
-                5. Pentru întrebări sau feedback, contactează echipa de suport tehnic la: <br/>
-                <b><a href="mailto:ferdinand.trefil03@e-uvt.ro">ferdinand.trefil03@e-uvt.ro</a></b>.
+      /*
+  Script JavaScript principal – interfață CarioScan
 
+  Gestionează:
+  - încărcarea imaginii de către utilizator
+  - trimiterea spre backend (YOLOv8 + CNN + XAI)
+  - afișarea imaginilor detectate și explicațiilor vizuale
+  - funcționalități UI: Dark Mode, Help, Zoom, Validare input
+*/
 
-            </p>
-            <button id="closeHelp" title="Închide">×</button>
-        </div>
-    </div>
-
-    <!-- Dark mode toggle -->
-    <button id="darkModeToggle" class="dark-toggle-btn" aria-label="Comută la modul întunecat" title="Dark mode/Light mode">
-        <svg id="darkIcon" width="32" height="32" viewBox="0 0 24 24" fill="#3498db" xmlns="http://www.w3.org/2000/svg">
-            <path d="M21.64 13a9 9 0 01-10.6-10.6 1 1 0 00-1.27-1.27 11 11 0 1013.14 13.14 1 1 0 00-1.27-1.27z"/>
-        </svg>
-    </button>
-
-    <!-- Loading Overlay with Spinner -->
-    <div id="overlay-loader">
-        <div class="spinner"></div>
-        <p class="loader-text">Se procesează imaginea...</p>
-    </div>
-
-    <!-- Modal pentru mărirea imaginilor -->
-    <div id="imageModal" class="modal">
-        <span id="closeModal" class="close">&times;</span>
-        <img class="modal-content" id="modalImage">
-       </div>
-
-    <script>
-        const input = document.getElementById("uploadInput");
+// Elementul input pentru imagine și containerul de rezultate
+const input = document.getElementById("uploadInput");
 const regionResultsContainer = document.getElementById("region-results-container");
 const overlayLoader = document.getElementById("overlay-loader");
 
+// La selectarea fișierului, începe procesul de detecție
 input.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
+    // Verificare dimensiune fișier (max 10MB)
     if (file.size > 10 * 1024 * 1024) {
         alert("Fișierul este prea mare. Alege o imagine mai mică de 10MB.");
         input.value = "";
@@ -450,8 +530,10 @@ input.addEventListener("change", async (event) => {
     data.append("image_file", file, "image_file");
 
     try {
+        // Afișează spinner în timpul procesării
         overlayLoader.classList.add("active");
 
+        // Trimite imaginea spre backend pentru detecție, clasificare, XAI
         const response = await fetch("/detect", {
             method: "POST",
             body: data
@@ -459,6 +541,7 @@ input.addEventListener("change", async (event) => {
 
         overlayLoader.classList.remove("active");
 
+        // Analizează răspunsul primit de la server
         if (!response.ok) {
             alert("Eroare la procesarea imaginii. Încearcă din nou.");
             return;
@@ -477,6 +560,7 @@ input.addEventListener("change", async (event) => {
         const confidences = result.cnn_confidences || [];
         const shapImages = result.shap_images || [];
 
+        // Construiește carduri HTML pentru fiecare regiune detectată
         for (let i = 0; i < croppedImages.length; i++) {
             const card = document.createElement("div");
             card.className = "region-card";
@@ -535,6 +619,8 @@ input.addEventListener("change", async (event) => {
         alert("A apărut o eroare la procesarea imaginii.");
     }
 });
+
+// Desenează chenare pe imaginea încărcată, pe baza detecțiilor YOLO
 function drawImageAndBoxes(file, detections) {
     const canvas = document.querySelector("canvas");
     const ctx = canvas.getContext("2d");
@@ -578,71 +664,73 @@ function drawImageAndBoxes(file, detections) {
 }
 
 
-        // Help modal functionality
-        const helpButton = document.getElementById("helpButton");
-        const helpModal = document.getElementById("helpModal");
-        const closeHelp = document.getElementById("closeHelp");
+    // Gestionare deschidere și închidere a ferestrei de ajutor (Help)
+    const helpButton = document.getElementById("helpButton");
+    const helpModal = document.getElementById("helpModal");
+    const closeHelp = document.getElementById("closeHelp");
 
-        helpButton.onclick = () => {
-            helpModal.style.display = "flex";
-        };
+    helpButton.onclick = () => {
+        helpModal.style.display = "flex";
+    };
 
-        closeHelp.onclick = () => {
+    closeHelp.onclick = () => {
+        helpModal.style.display = "none";
+    };
+
+    window.onclick = (event) => {
+        if (event.target === helpModal) {
             helpModal.style.display = "none";
-        };
-
-        window.onclick = (event) => {
-            if (event.target === helpModal) {
-                helpModal.style.display = "none";
-            }
-        };
-
-        // Dark mode toggle
-        const darkModeToggle = document.getElementById("darkModeToggle");
-        const darkIcon = document.getElementById("darkIcon");
-
-        function updateDarkIcon(isDark) {
-            darkIcon.innerHTML = isDark
-                ? '<circle cx="12" cy="12" r="5" fill="#f1c40f"></circle>'
-                : '<path d="M21.64 13a9 9 0 01-10.6-10.6 1 1 0 00-1.27-1.27 11 11 0 1013.14 13.14 1 1 0 00-1.27-1.27z" fill="#3498db"/>';
         }
+    };
 
-        darkModeToggle.onclick = () => {
-            const isDark = document.body.classList.toggle("dark");
-            localStorage.setItem("darkMode", isDark);
-            updateDarkIcon(isDark);
-        };
+    // Toggle pentru Dark Mode și salvarea preferinței în localStorage
+    const darkModeToggle = document.getElementById("darkModeToggle");
+    const darkIcon = document.getElementById("darkIcon");
 
-        window.onload = () => {
-            const isDark = localStorage.getItem("darkMode") === "true";
-            if (isDark) document.body.classList.add("dark");
-            updateDarkIcon(isDark);
-        };
+    function updateDarkIcon(isDark) {
+        darkIcon.innerHTML = isDark
+            ? '<circle cx="12" cy="12" r="5" fill="#f1c40f"></circle>'
+            : '<path d="M21.64 13a9 9 0 01-10.6-10.6 1 1 0 00-1.27-1.27 11 11 0 1013.14 13.14 1 1 0 00-1.27-1.27z" fill="#3498db"/>';
+    }
 
+    darkModeToggle.onclick = () => {
+        const isDark = document.body.classList.toggle("dark");
+        localStorage.setItem("darkMode", isDark);
+        updateDarkIcon(isDark);
+    };
 
-        const modal = document.getElementById("imageModal");
-        const modalImg = document.getElementById("modalImage");
-        const closeModal = document.getElementById("closeModal");
+    window.onload = () => {
+        const isDark = localStorage.getItem("darkMode") === "true";
+        if (isDark) document.body.classList.add("dark");
+        updateDarkIcon(isDark);
+    };
 
-        regionResultsContainer.addEventListener("click", (e) => {
-            if (e.target.tagName === "IMG") {
-                const full = e.target.dataset.fullImage;
-                modal.style.display = "block";
-                modalImg.src = full ? full : e.target.src;
-            }
-        });
+    // Când utilizatorul dă click pe o imagine, o deschide mărită într-un modal
+    const modal = document.getElementById("imageModal");
+    const modalImg = document.getElementById("modalImage");
+    const closeModal = document.getElementById("closeModal");
 
-        closeModal.onclick = () => {
+    regionResultsContainer.addEventListener("click", (e) => {
+        if (e.target.tagName === "IMG") {
+            const full = e.target.dataset.fullImage;
+            modal.style.display = "block";
+            modalImg.src = full ? full : e.target.src;
+        }
+    });
+
+    closeModal.onclick = () => {
+        modal.style.display = "none";
+    };
+
+    window.onclick = (e) => {
+        if (e.target === modal) {
             modal.style.display = "none";
-        };
+        }
+    };
 
-        window.onclick = (e) => {
-            if (e.target === modal) {
-                modal.style.display = "none";
-            }
-};
+  // Validare extensie și dimensiune fișier înainte de procesare
 
-   const uploadInput = document.getElementById('uploadInput');
+  const uploadInput = document.getElementById('uploadInput');
   const fileName = document.getElementById('fileName');
   const maxSizeMB = 10;
   const allowedExtensions = ['jpg', 'jpeg', 'png'];
@@ -652,7 +740,7 @@ function drawImageAndBoxes(file, detections) {
       const file = this.files[0];
       const fileExtension = file.name.split('.').pop().toLowerCase();
 
-      // Verificare extensie
+
       if (!allowedExtensions.includes(fileExtension)) {
         fileName.style.color = 'red';
         fileName.textContent = 'Format invalid. Te rugăm să alegi un fișier .jpg, .jpeg sau .png.';
@@ -668,14 +756,12 @@ function drawImageAndBoxes(file, detections) {
         return;
       }
 
-      // Fișier valid
       fileName.style.color = '#555';
       fileName.textContent = 'Fișier selectat: ' + file.name;
     } else {
       fileName.textContent = '';
     }
   });
-
 
     </script>
 </body>
