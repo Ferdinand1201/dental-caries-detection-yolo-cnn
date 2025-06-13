@@ -63,20 +63,28 @@ Aplicația va fi disponibilă la adresa: http://localhost:8080
 
 # Despre această versiune
 
-Acest proiect reprezintă o versiune extinsă a repository-ului original  https://github.com/andreygermanov/yolov8_caries_detector, creat de Andrey Germanov.
+Acest proiect reprezintă o versiune extinsă a repository-ului original [yolov8_caries_detector](https://github.com/andreygermanov/yolov8_caries_detector), creat de Andrey Germanov.
 
-Modificările și contribuțiile proprii includ:
+Contribuțiile proprii aduse includ:
 
-* Integrarea unui clasificator CNN separat (ResNet-18) pentru analiza zonelor decupate.
+* Integrarea unui clasificator CNN dedicat (ResNet-18) aplicat pe regiunile decupate de YOLOv8, pentru o clasificare binară (carie / non-carie) mai precisă.
+* Implementarea explicațiilor vizuale folosind tehnicile Grad-CAM++ și Integrated Gradients, pentru a evidenția zonele relevante în procesul de decizie.
+* Generarea automată de hărți explicative pentru fiecare regiune detectată, vizibile direct în interfața web.
+* Dezvoltarea unei interfețe web moderne, cu suport pentru zoom pe regiuni, mod întunecat (dark mode), validare a fișierelor și afișare organizată a rezultatelor.
+* Optimizări de scalabilitate locală: salvare automată a rezultatelor, sortarea logică a regiunilor, modularizarea codului și integrarea completă a fluxului de inferență + explicație.
 
-* Implementarea explicațiilor vizuale prin Grad-CAM++ și Integrated Gradients.
+Aceste extinderi și îmbunătățiri au fost realizate în cadrul lucrării de licență, sub coordonarea prof. univ. dr. Darian Onchiș, la Universitatea de Vest din Timișoara.
 
-* Generarea de imagini explicative pentru fiecare regiune detectată, vizibile direct în interfața web.
+Mulțumiri autorului original pentru codul sursă oferit ca punct de plecare în această cercetare.
 
-* Dezvoltarea unei interfețe web moderne și interactive, cu funcționalități de zoom, mod întunecat și validare a fișierelor.
+## Licență
 
-* Optimizări pentru scalabilitate locală, salvare automată a rezultatelor, sortarea regiunilor detectate și afișare organizată.
+Acest proiect este derivat din [yolov8_caries_detector](https://github.com/andreygermanov/yolov8_caries_detector), publicat sub licența GNU General Public License v3.0 (GPLv3).
 
-Toate aceste îmbunătățiri au fost realizate în cadrul lucrării de licență, sub coordonarea prof. univ .dr. Darian Onchiș.
+Toate modificările și extinderile aduse – clasificatorul CNN ResNet18, integrarea metodelor explicabile Grad-CAM++ și Integrated Gradients, precum și interfața web interactivă – sunt distribuite tot sub licența **GPLv3**, în conformitate cu termenii acesteia.
 
-Mulțumiri autorului original pentru codul de bază folosit ca punct de plecare în această cercetare.
+> Acest software este oferit cu bună-credință, în speranța că va fi util, dar **fără nicio garanție**, nici explicită, nici implicită – inclusiv fără garanții de vandabilitate sau de adecvare la un anumit scop.
+
+Pentru detalii complete, consultă fișierul [LICENSE](./LICENSE).
+
+
