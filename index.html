@@ -637,10 +637,10 @@ function drawImageAndBoxes(file, detections) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = "#27ae60";
+            ctx.strokeStyle = "#00FF00";
             ctx.lineWidth = 3;
-            ctx.font = "bold 18px Arial";
-            ctx.fillStyle = "#27ae60";
+            ctx.font = "bold 25px Arial";
+            ctx.fillStyle = "#00FF00";
 
             detections.forEach((det, i) => {
                 const [x1, y1, x2, y2, conf, label] = det;
