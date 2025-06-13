@@ -1,4 +1,4 @@
-# Serviciu web pentru detectarea cariilor dentare utilizând rețeaua neuronală YOLOv8 și clasificare explicabilă cu CNN
+# Sistem AI explicabil pentru detectarea cariilor dentare folosind YOLOv8 și clasificare CNN
 
 Acest repository conține codul sursă pentru un sistem inteligent de detecție a cariilor dentare, dezvoltat ca parte a lucrării mele de licență. Sistemul utilizează modelul YOLOv8 pentru detectarea automată a zonelor afectate din imagini dentare și un clasificator CNN pentru analiza detaliată a regiunilor decupate, însoțită de explicații vizuale generate prin tehnici de tip XAI (Grad-CAM++ și Integrated Gradients).
 
@@ -16,15 +16,32 @@ Acest repository conține codul sursă pentru un sistem inteligent de detecție 
   
 ## Structura proiectului
 
-* `convert.ipynb` – Conversie din formatul Supervisely în format YOLOv8.
-* `train.ipynb` – Script de antrenare pentru modelul YOLOv8.
-* `train_caries_classifier.py` – Script de antrenare a clasificatorului CNN ResNet-18 pe regiunile decupate.
+### Script-uri și notebook-uri
+
+* `convert.ipynb` – Conversie din formatul Supervisely în format YOLOv8
+* `predict.ipynb` – Script pentru testarea și vizualizarea detecției cariilor pe imagini personalizate
+* `train.ipynb` – Script de antrenare pentru modelul YOLOv8
+* `train_caries_classifier.py` – Script de antrenare a clasificatorului CNN ResNet-18 pe regiunile decupate
 * `cnn_explainer.py` – Modul pentru generarea explicațiilor Grad-CAM++ și Integrated Gradients pentru clasificator
-* `object_detector.py` – Backend Flask care gestionează logica de detecție, clasificare și explicabilitate.
-* `index.html` – Interfața web a aplicației.
+* `object_detector.py` – Backend Flask care gestionează logica de detecție, clasificare și explicabilitate
+* `index.html` – Interfața web a aplicației
+
+### Modele
+  
 * `best.pt` – Modelul YOLOv8 antrenat pe 30 de epoci
-* `model_cnn.pth` – Modelul CNN antrenat pentru clasificarea imaginilor dentare.
-* caries.jpg – Exemplu de imagine dentară cu carii.
+* `model_cnn.pth` – Modelul CNN antrenat pentru clasificarea imaginilor dentare
+
+  ### Resurse și configurări
+
+* `README.md` - Documentația proiectului
+* `requirements.txt`- lista completă a pachetelor Python necesare
+
+### Foldere auxiliare
+  
+* `dataset/` – Setul de date folosit pentru antrenarea CNN-ului
+* `crops/` – Regiunile decupate automat de YOLOv8, salvate pentru clasificare CNN
+* `explanations/` – Hărțile explicative generate (Grad-CAM++ și Integrated Gradients)
+* `test_images/` – Imagini folosite pentru testarea funcționalității aplicației
 
 ## Date de antrenare
 
@@ -34,7 +51,7 @@ Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetni
 ## Instrucțiuni de instalare
 
 * Clonează acest repository
-* Instalează dependendințele: **pip install -r requirements.txt**
+* Instalează dependințele: **pip install -r requirements.txt**
 
 ## Pornește serverul Flask
 
@@ -49,20 +66,20 @@ Aplicația va fi disponibilă la adresa: http://localhost:8080
 
 # Despre această versiune
 
-Acest proiect reprezintă o versiune extinsă a repository-ului original yolov8_caries_detector, creat de Andrey Germanov.
+Acest proiect reprezintă o versiune extinsă a repository-ului original  https://github.com/andreygermanov/yolov8_caries_detector, creat de Andrey Germanov.
 
 Modificările și contribuțiile proprii includ:
 
-* Integrarea unui clasificator CNN separat (ResNet-18) aplicat pe regiunile decupate de YOLOv8, pentru o analiză binară carie / non-carie.
+* Integrarea unui clasificator CNN separat (ResNet-18) pentru analiza zonelor decupate.
 
-* Implementarea de funcționalități XAI pentru clasificator, folosind metodele Grad-CAM++ și Integrated Gradients.
+* Implementarea explicațiilor vizuale prin Grad-CAM++ și Integrated Gradients.
 
 * Generarea de imagini explicative pentru fiecare regiune detectată, vizibile direct în interfața web.
 
-* Dezvoltarea completă a unei interfețe web moderne și interactive, cu funcționalități de zoom, mod întunecat și validare a fișierelor.
+* Dezvoltarea unei interfețe web moderne și interactive, cu funcționalități de zoom, mod întunecat și validare a fișierelor.
 
 * Optimizări pentru scalabilitate locală, salvare automată a rezultatelor, sortarea regiunilor detectate și afișare organizată.
 
-Toate aceste îmbunătățiri au fost realizate în cadrul lucrării mele de licență, sub îndrumarea prof. univ. dr. Darian Onchiș.
+Toate aceste îmbunătățiri au fost realizate în cadrul lucrării de licență, sub coordonarea prof. univ .dr. Darian Onchiș.
 
 Mulțumiri autorului original pentru codul de bază folosit ca punct de plecare în această cercetare.
