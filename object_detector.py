@@ -1,20 +1,21 @@
 """
-object_detector.py – Backend Flask pentru sistemul de detecție și clasificare a cariilor dentare.
+object_detector.py – Backend Flask pentru sistemul de detecție și clasificare a cariilor dentare
 
-Acest serviciu primește imagini dentare, aplică modelul YOLOv8 pentru detecție, clasifică regiunile decupate folosind
-un model CNN și generează explicații vizuale prin Grad-CAM++ și Integrated Gradients.
+Funcționalitate:
+- Detecție automată a cariilor folosind YOLOv8
+- Clasificare carie / non-carie folosind CNN
+- Generare explicații vizuale (Grad-CAM++, Integrated Gradients)
 """
 
 from ultralytics import YOLO
 from flask import request, Flask, jsonify, send_from_directory, make_response
 from torchvision import transforms
-import torch
 from PIL import Image
+from waitress import serve
 import os
 import uuid
-import time
 import logging
-from cnn_explainer import generate_gradcam, generate_shap, load_cnn_model, load_background, create_explainer
+from cnn_explainer import generate_gradcam, generate_integrated_gradients, load_cnn_model, load_background, create_explainer
 
 # Directorul de bază al aplicației
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -176,7 +177,7 @@ def detect():
     cropped_paths = crop_yolo_detections(image, detections)
     cropped_image_urls = []
     gradcam_image_urls = []
-    shap_image_urls = []
+    ig_image_urls = []
     cnn_predictions = []
     cnn_confidences = []
     cropped_full_urls = []
@@ -201,18 +202,18 @@ def detect():
 
         # Explicație alternativă cu Integrated Gradients
         try:
-            shap_path = generate_shap(
+            ig_path = generate_integrated_gradients(
                 cnn_model,
                 crop_path,
                 output_path=f"explanations/IntegratedGradients/integrated_gradients_{region_id}.png",
                 region_id=region_id
             )
-            shap_url = f"/explanations/IntegratedGradients/{os.path.basename(shap_path)}"
+            ig_url = f"/explanations/IntegratedGradients/{os.path.basename(ig_path)}"
         except Exception as e:
             print(f"Integrated Gradients failed for {region_id}: {e}")
-            shap_url = None
+            ig_url_url = None
 
-        shap_image_urls.append(shap_url)
+        ig_image_urls.append(ig_url)
         cnn_predictions.append(class_names.get(predicted_class, "necunoscut"))
         cnn_confidences.append(round(confidence * 100, 2))
 
@@ -221,7 +222,7 @@ def detect():
         "cropped_images": cropped_image_urls,
         "cropped_full_images": cropped_full_urls,
         "gradcam_images": gradcam_image_urls,
-        "shap_images": shap_image_urls,
+        "shap_images": ig_image_urls,
         "cnn_predictions": cnn_predictions,
         "cnn_confidences": cnn_confidences
     })
@@ -240,6 +241,5 @@ def serve_explanation(filename):
     return send_from_directory(folder, file)
 
 if __name__ == "__main__":
-    # Pornirea serverului folosind waitress (pentru producție locală)
-    from waitress import serve
+    # Pornirea serverului folosind waitress
     serve(app, host="0.0.0.0", port=8080, threads=2)

@@ -7,20 +7,22 @@ Integrated Gradients, utile pentru interpretarea clasificării imaginilor decupa
 
 import os
 import torch
-import torchvision.models as models
-import torchvision.transforms as transforms
-from torchvision.models import ResNet18_Weights
-from torchvision.transforms import InterpolationMode
-from PIL import Image
-import numpy as np
-import logging
-from pytorch_grad_cam import GradCAMPlusPlus
-from pytorch_grad_cam.utils.image import show_cam_on_image
-from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 import shap
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from PIL import Image
+import numpy as np
+import logging
+import traceback
+import torchvision.models as models
+from torchvision.models import ResNet18_Weights
+import torchvision.transforms as transforms
+from torchvision.transforms import InterpolationMode
+from pytorch_grad_cam import GradCAMPlusPlus
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
 # Selectare device (GPU dacă este disponibil)
@@ -119,10 +121,9 @@ def create_explainer(model, background_images):
     explainer = shap.GradientExplainer(model, background_batch)
     return explainer
 
-def generate_shap(cnn_model, image_path, output_path="integrated_gradients_output.png", region_id=None):
+def generate_integrated_gradients(cnn_model, image_path, output_path="integrated_gradients_output.png", region_id=None):
     """
-      Generează o explicație vizuală folosind o metodă personalizată de tip Integrated Gradients,
-      fără a apela funcțiile standard din biblioteca SHAP.
+      Generează o explicație vizuală folosind o metodă personalizată de tip Integrated Gradients
 
       Procesul implică interpolări liniare între o imagine de bază (baseline) și imaginea țintă,
       urmate de acumularea gradientului pentru clasa prezisă.
@@ -186,7 +187,6 @@ def generate_shap(cnn_model, image_path, output_path="integrated_gradients_outpu
 
     except Exception as e:
         logging.error(f"Generarea explicației a eșuat: {e}")
-        import traceback
         traceback.print_exc()
 
         try:
@@ -224,7 +224,7 @@ if __name__ == "__main__":
     image = Image.open(image_path).convert("RGB")
 
     gradcam_path, pred_class, conf = generate_gradcam(image, model, region_id)
-    shap_path = generate_shap(model, image_path, output_path=f"explanations/IntegratedGradients_{region_id}.png", region_id=region_id)
+    shap_path = generate_integrated_gradients(model, image_path, output_path=f"explanations/IntegratedGradients_{region_id}.png", region_id=region_id)
 
     print(f"Clasa prezisă: {pred_class} | Încredere: {conf * 100:.2f}%")
     print(f"Grad-CAM++ salvat la: {gradcam_path}")
