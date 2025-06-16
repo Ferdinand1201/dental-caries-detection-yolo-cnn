@@ -46,7 +46,8 @@ Acest repository conține codul sursă pentru un sistem inteligent de detecție 
 ## Date de antrenare
 
 Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetninja.com/dentalai. Pentru a utiliza acest set de date, este necesară conversia sa în formatul YOLOv8 folosind notebook-ul `convert.ipynb`
-## Instrucțiuni de rulare
+
+## Instrucțiuni de utilizare
 
 1. Asigurați-vă că toate fișierele proiectului se află în același director.
 2. Instalați pachetele necesare cu comanda:
