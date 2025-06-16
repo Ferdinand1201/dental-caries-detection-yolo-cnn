@@ -37,29 +37,30 @@ Acest repository conține codul sursă pentru un sistem inteligent de detecție 
 * `requirements.txt`- lista completă a pachetelor Python necesare
 
 ### Foldere auxiliare
+
+* `dataset/` – Setul de date folosit pentru antrenarea CNN-ului (neinclus în proiect)
+* `crops/` – Se creează automat la rularea aplicației; conține regiunile decupate de YOLOv8 pentru clasificare
+* `explanations/` – Se generează automat; conține hărțile explicative (Grad-CAM++ și Integrated Gradients)
   
-* `dataset/` – Setul de date folosit pentru antrenarea CNN-ului
-* `crops/` – Regiunile decupate automat de YOLOv8, salvate pentru clasificare CNN
-* `explanations/` – Hărțile explicative generate (Grad-CAM++ și Integrated Gradients)
-* `test_images/` – Imagini folosite pentru testarea funcționalității aplicației
 
 ## Date de antrenare
 
 Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetninja.com/dentalai. Pentru a utiliza acest set de date, este necesară conversia sa în formatul YOLOv8 folosind notebook-ul `convert.ipynb`
+## Instrucțiuni de rulare
+
+1. Asigurați-vă că toate fișierele proiectului se află în același director.
+2. Instalați pachetele necesare cu comanda:
+
+<pre>  pip install -r requirements.txt </pre>
+
+3. Porniți aplicația rulând:
+
+<pre> python object_detector.py </pre>
 
 
-## Instrucțiuni de instalare
-
-* Clonează acest repository
-* Instalează dependințele: **pip install -r requirements.txt**
-* Asigură-te că fișierele `object_detector.py`, `index.html`, `best.pt` și `model_cnn.pth` sunt în același director
-* Rulează serverul local
-* 
-```
-python object_detector.py
-```
-
-Aplicația va fi disponibilă la adresa: http://localhost:8080
+4. Interfața web va fi disponibilă la adresa:
+   
+   http://localhost:8080
 
 # Despre această versiune
 
@@ -67,24 +68,19 @@ Acest proiect reprezintă o versiune extinsă a repository-ului original [yolov8
 
 Contribuțiile proprii aduse includ:
 
-* Integrarea unui clasificator CNN dedicat (ResNet-18) aplicat pe regiunile decupate de YOLOv8, pentru o clasificare binară (carie / non-carie) mai precisă.
+* Integrarea unui clasificator CNN ResNet18 aplicat pe regiunile decupate de YOLOv8, pentru o clasificare mai precisă.
 * Implementarea explicațiilor vizuale folosind tehnicile Grad-CAM++ și Integrated Gradients, pentru a evidenția zonele relevante în procesul de decizie.
 * Generarea automată de hărți explicative pentru fiecare regiune detectată, vizibile direct în interfața web.
 * Dezvoltarea unei interfețe web moderne, cu suport pentru zoom pe regiuni, mod întunecat (dark mode), validare a fișierelor și afișare organizată a rezultatelor.
 * Optimizări de scalabilitate locală: salvare automată a rezultatelor, sortarea logică a regiunilor, modularizarea codului și integrarea completă a fluxului de inferență + explicație.
 
-Aceste extinderi și îmbunătățiri au fost realizate în cadrul lucrării de licență, sub coordonarea prof. univ. dr. Darian Onchiș, la Universitatea de Vest din Timișoara.
-
-Mulțumiri autorului original pentru codul sursă oferit ca punct de plecare în această cercetare.
 
 ## Licență
 
 Acest proiect este derivat din [yolov8_caries_detector](https://github.com/andreygermanov/yolov8_caries_detector), publicat sub licența GNU General Public License v3.0 (GPLv3).
 
-Toate modificările și extinderile aduse – clasificatorul CNN ResNet18, integrarea metodelor explicabile Grad-CAM++ și Integrated Gradients, precum și interfața web interactivă – sunt distribuite tot sub licența **GPLv3**, în conformitate cu termenii acesteia.
+Toate modificările și extinderile aduse sunt distribuite tot sub licența **GPLv3**, în conformitate cu termenii acesteia.
 
-> Acest software este oferit cu bună-credință, în speranța că va fi util, dar **fără nicio garanție**, nici explicită, nici implicită – inclusiv fără garanții de vandabilitate sau de adecvare la un anumit scop.
-
-Pentru detalii complete, consultă fișierul [LICENSE](./LICENSE).
+Pentru detalii complete, consultați fișierul [LICENSE](./LICENSE).
 
 
