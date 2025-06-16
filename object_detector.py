@@ -24,13 +24,12 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
-# Încărcarea modelului YOLOv8 pentru detecția cariilor
 
+# Încărcarea modelului YOLOv8 pentru detecția cariilor
 logging.info("Se încarcă modelul YOLOv8...")
 yolo_model = YOLO("best.pt")
 
 # Încărcarea modelului CNN antrenat pentru clasificare carie/non-carie
-
 logging.info("Se încarcă modelul CNN pentru clasificare...")
 cnn_model = load_cnn_model("model_cnn.pth")
 
@@ -45,7 +44,7 @@ background_paths = [
 background_images = [Image.open(p).convert("RGB") for p in background_paths]
 shap_explainer = create_explainer(cnn_model, background_images)
 
-# Creează directoarele în care se vor salva imaginile decupate (YOLO) și explicațiile vizuale (Grad-CAM++, Integrated Gradients).
+# Creearea directoarelor în care se vor salva imaginile decupate (YOLO) și explicațiile vizuale (Grad-CAM++, Integrated Gradients).
 # Acestea sunt păstrate pentru afișare și analiză ulterioară.
 CROPS_DIR = "crops"
 EXPLANATIONS_DIR = "explanations"
@@ -72,7 +71,7 @@ def detect_objects_on_image(image):
         x1, y1, x2, y2 = [x.item() for x in box.xyxy[0]]
         class_id = int(box.cls[0].item())
         if class_id != 0:
-            continue  # Păstrăm doar clasele de tip "carie"
+            continue
         x1 = round(x1 * scale_x)
         y1 = round(y1 * scale_y)
         x2 = round(x2 * scale_x)
@@ -91,7 +90,7 @@ def crop_yolo_detections(image, detections, output_dir=CROPS_DIR):
     for i, det in enumerate(detections):
         x1, y1, x2, y2, class_name = det
 
-        # Adaugă padding pentru a păstra contextul vizual
+        # Adăugare padding pentru a păstra contextul vizual
         pad_x = int((x2 - x1) * 0.2)
         pad_y = int((y2 - y1) * 0.2)
 
@@ -127,7 +126,7 @@ def sort_detections_by_grid(detections, row_threshold=50):
         return []
 
     detections = [list(det) for det in detections]
-    detections_with_center_y = [(det, (det[1] + det[3]) / 2) for det in detections]  # centrul vertical
+    detections_with_center_y = [(det, (det[1] + det[3]) / 2) for det in detections]
     detections_with_center_y.sort(key=lambda x: x[1])
 
     sorted_groups = []
@@ -138,7 +137,7 @@ def sort_detections_by_grid(detections, row_threshold=50):
         if abs(y_center - current_y) < row_threshold:
             current_group.append(det)
         else:
-            current_group.sort(key=lambda d: d[0])  # sortare orizontală
+            current_group.sort(key=lambda d: d[0])
             sorted_groups.extend(current_group)
             current_group = [det]
             current_y = y_center
@@ -151,6 +150,7 @@ def sort_detections_by_grid(detections, row_threshold=50):
 @app.route("/")
 def root():
     """Răspunde cu pagina principală HTML"""
+
     with open("index.html", encoding="utf-8") as file:
         content = file.read()
     response = make_response(content)
@@ -200,7 +200,7 @@ def detect():
         explanation_url = f"/explanations/Grad-CAM++/{os.path.basename(explanation_path)}"
         gradcam_image_urls.append(explanation_url)
 
-        # Explicație alternativă cu Integrated Gradients
+        # Explicație Integrated Gradients
         try:
             ig_path = generate_integrated_gradients(
                 cnn_model,
@@ -211,7 +211,7 @@ def detect():
             ig_url = f"/explanations/IntegratedGradients/{os.path.basename(ig_path)}"
         except Exception as e:
             print(f"Integrated Gradients failed for {region_id}: {e}")
-            ig_url_url = None
+            ig_url = None
 
         ig_image_urls.append(ig_url)
         cnn_predictions.append(class_names.get(predicted_class, "necunoscut"))
@@ -230,11 +230,13 @@ def detect():
 @app.route('/crops/<path:filename>')
 def serve_crop(filename):
     """Servește imaginile decupate pentru afișare în interfață"""
+
     return send_from_directory(CROPS_DIR, filename)
 
 @app.route('/explanations/<path:filename>')
 def serve_explanation(filename):
-    """Servește imaginile de explicație generate de XAI"""
+    """Servește hărțile explicative generate"""
+
     full_path = os.path.join(EXPLANATIONS_DIR, filename)
     folder = os.path.dirname(full_path)
     file = os.path.basename(full_path)

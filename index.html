@@ -1,13 +1,14 @@
 <!--
   index.html – Interfață web pentru aplicația CarioScan
 
-  Acest fișier reprezintă componenta frontend a aplicației de diagnostic stomatologic automatizat.
+  Acest fișier reprezintă componenta frontend a aplicației CarioScan.
   Include cod HTML, CSS și JavaScript într-o singură pagină, permițând utilizatorului:
-    - să încarce o imagine dentară (radiografie sau fotografie intraorală),
+    - să încarce o imagine dentară (fotografie intraorală),
     - să vizualizeze detecțiile efectuate de YOLOv8 (chenare pe canvas),
-    - să analizeze regiuni decupate din imagine, fiecare cu clasificare CNN (carie / non-carie),
+    - să analizeze regiunile decupate din imagine, fiecare cu clasificare CNN,
     - să observe explicațiile vizuale generate automat: Grad-CAM++ și Integrated Gradients (XAI),
-    - să comute între modul Light / Dark,
+    - să comute între modul Light/Dark,
+    - să aplice zoom pe hărțile generate și pe regiunile decupate,
     - să acceseze o fereastră de Ajutor și să mărească imaginile individuale.
 
   Secțiuni:

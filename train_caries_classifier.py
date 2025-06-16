@@ -1,8 +1,8 @@
 """
 train_caries_classifier.py – Script pentru antrenarea modelului CNN ResNet-18
 
-Acest script încarcă imaginile etichetate dintr-un director structurat pe clase, aplică transformări de augmentare,
-antrenează un model ResNet-18 pentru clasificarea imaginilor dentare în carie / non-carie, și salvează cel mai bun model obținut.
+Acest script încarcă imaginile etichetate dindirectorul /dataset, aplică transformări de augmentare,
+antrenează un model ResNet-18 pentru clasificarea imaginilor dentare în carie/non-carie și salvează cel mai bun model obținut în model_cnn.
 """
 
 import os
@@ -45,7 +45,6 @@ val_dataset = ImageFolder(val_dir, transform=transform)
 
 print("Etichete:", train_dataset.class_to_idx)
 
-# Calcularea ponderilor inverse pentru sampling echilibrat
 class_counts = [0] * len(train_dataset.classes)
 for _, label in train_dataset.samples:
     class_counts[label] += 1

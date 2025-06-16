@@ -1,7 +1,7 @@
 """
 cnn_explainer.py – Modul pentru generarea de explicații vizuale asupra predicțiilor CNN.
 
-Acest fișier conține funcționalități pentru încărcarea unui model CNN, generarea de explicații Grad-CAM++ și
+Acest fișier conține funcționalități pentru încărcarea modelului CNN, generarea de explicații Grad-CAM++ și
 Integrated Gradients, utile pentru interpretarea clasificării imaginilor decupate din regiunile detectate de YOLOv8.
 """
 
@@ -29,7 +29,7 @@ logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 def load_cnn_model(path):
-    """Încarcă un model ResNet18 antrenat pentru clasificarea imaginilor dentare în 2 clase: carie și non-carie"""
+    """Încarcă modelul ResNet18 antrenat pentru clasificarea imaginilor dentare în 2 clase: carie și non-carie"""
     if not os.path.exists(path):
         raise FileNotFoundError(f"Model file not found at {path}")
 
@@ -87,7 +87,7 @@ def generate_gradcam(pil_image, model, region_id="0"):
 def disable_inplace_relu(model):
     """
     Parcurge toate layerele ReLU din model și dezactivează execuția in-place.
-    Această operație este necesară pentru ca metodele de explicabilitate bazate pe gradient (Grad-CAM, IG)
+    Această operație este necesară pentru ca metoda de explicabilitate bazată pe gradient
     să poată reconstrui corect graficul de computație pentru backpropagation.
     """
 
@@ -95,8 +95,12 @@ def disable_inplace_relu(model):
         if isinstance(mod, torch.nn.ReLU):
             mod.inplace = False
 
+
 def load_background(background_paths):
-    """Încarcă imaginile de fundal pentru Integrated Gradients"""
+    """
+    Încarcă imaginile de fundal pentru Integrated Gradients
+
+    """
     background_images = []
     for img_path in background_paths:
         img = Image.open(img_path).convert("RGB")
@@ -105,7 +109,7 @@ def load_background(background_paths):
 
 def create_explainer(model, background_images):
     """
-     Creează un explainer cu imagini de fundal pentru o metodă personalizată de tip Integrated Gradients.
+     Creează un explainer cu imagini de fundal pentru metoda Integrated Gradients.
      Deși obiectul returnat este creat cu shap.GradientExplainer, metoda SHAP propriu-zisă nu este folosită.
      """
     disable_inplace_relu(model)
@@ -124,11 +128,9 @@ def create_explainer(model, background_images):
 def generate_integrated_gradients(cnn_model, image_path, output_path="integrated_gradients_output.png", region_id=None):
     """
       Generează o explicație vizuală folosind o metodă personalizată de tip Integrated Gradients
-
-      Procesul implică interpolări liniare între o imagine de bază (baseline) și imaginea țintă,
+      Procesul implică interpolări liniare între o imagine de bază și imaginea țintă,
       urmate de acumularea gradientului pentru clasa prezisă.
-
-      Returnează o hartă de atenție salvată pe disc, care evidențiază zonele relevante pentru predicție.
+      Returnează o hartă de atenție , care evidențiază zonele relevante pentru predicție.
       """
     try:
         logging.info(f"Generare explicație Integrated Gradients pentru regiunea {region_id}")
@@ -179,6 +181,7 @@ def generate_integrated_gradients(cnn_model, image_path, output_path="integrated
         plt.imshow(attr_norm, alpha=0.6, cmap='magma')
         plt.axis('off')
         plt.tight_layout()
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         plt.savefig(output_path, bbox_inches='tight', dpi=150, facecolor='white')
         plt.close()
 
@@ -210,7 +213,7 @@ def generate_integrated_gradients(cnn_model, image_path, output_path="integrated
             return None
 
 if __name__ == "__main__":
-    # Exemplu de rulare standalone pentru testare locală
+    # Exemplu de rulare pentru testare locală
     model_path = "model_cnn.pth"
     image_path = "cale_catre_imagine_cropata.jpg"
     background_paths = [
