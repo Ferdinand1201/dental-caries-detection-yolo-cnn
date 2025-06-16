@@ -1,6 +1,6 @@
-# Sistem AI explicabil pentru detectarea cariilor dentare folosind YOLOv8 și clasificare CNN
+# CarioScan – Sistem inteligent de detecție și explicare a cariilor dentare cu YOLOv8 și CNN
 
-Acest repository conține codul sursă pentru un sistem inteligent de detecție a cariilor dentare, dezvoltat ca parte a lucrării mele de licență. Sistemul utilizează modelul YOLOv8 pentru detectarea automată a zonelor afectate din imagini dentare și un clasificator CNN pentru analiza detaliată a regiunilor decupate, însoțită de explicații vizuale generate prin tehnici de tip XAI (Grad-CAM++ și Integrated Gradients).
+Acest repository conține codul sursă pentru un sistem inteligent de detecție a cariilor dentare, dezvoltat ca parte a lucrării de licență. Sistemul utilizează modelul YOLOv8 pentru detectarea automată a zonelor afectate din imagini dentare și un clasificator CNN pentru analiza detaliată a regiunilor decupate, însoțită de explicații vizuale generate prin tehnici de tip XAI (Grad-CAM++ și Integrated Gradients).
 
 ## Funcționalități principale
 
