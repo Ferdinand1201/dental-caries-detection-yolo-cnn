@@ -65,9 +65,7 @@ Sistemul a fost antrenat pe datasetul DentalAI, disponibil la: https://datasetni
 
 # Despre această versiune
 
-Acest proiect reprezintă o versiune extinsă a repository-ului original [yolov8_caries_detector](https://github.com/andreygermanov/yolov8_caries_detector), creat de Andrey Germanov.
-
-Contribuțiile proprii aduse includ:
+Proiectul include o serie de extinderi realizate în cadrul lucrării de licență:
 
 * Integrarea unui clasificator CNN ResNet18 aplicat pe regiunile decupate de YOLOv8, pentru o clasificare mai precisă.
 * Implementarea explicațiilor vizuale folosind tehnicile Grad-CAM++ și Integrated Gradients, pentru a evidenția zonele relevante în procesul de decizie.
