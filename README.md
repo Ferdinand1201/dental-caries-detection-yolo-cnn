@@ -6,7 +6,7 @@ Acest repository conține codul sursă pentru un sistem inteligent de detecție 
 
 * Detecția cariilor dentare în imagini intraorale, utilizând modelul YOLOv8.
 
-* Clasificarea regiunilor suspecte în carie / non-carie cu ajutorul unui CNN bazat pe ResNet-18.
+* Clasificarea regiunilor suspecte cu ajutorul unui CNN bazat pe ResNet-18.
 
 * Generarea de explicații vizuale pentru deciziile CNN, folosind metodele Grad-CAM++ și Integrated Gradients.
 
